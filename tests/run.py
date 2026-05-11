@@ -167,6 +167,7 @@ class TestRunner:
         - ``unit``: unit tests
         - ``functional``: component-level GPU tests (ops, compilation, distributed)
         - ``e2e``: end-to-end model tests (inference, serving)
+        - ``benchmark``: benchmark smoke tests
         - ``all``: all of the above
         """
         cases: list[TestCase] = []
@@ -179,6 +180,9 @@ class TestRunner:
 
         if self.scope in ("all", "e2e"):
             cases.extend(self._discover_e2e_tests())
+
+        if self.scope in ("all", "benchmark"):
+            cases.extend(self._discover_benchmark_tests())
 
         return cases
 
@@ -329,6 +333,41 @@ class TestRunner:
         """End-to-end model tests (inference, serving)."""
         return self._discover_from_yaml("tests/e2e_tests")
 
+    def _discover_benchmark_tests(self) -> list[TestCase]:
+        """Benchmark smoke tests configured by platform YAML."""
+        benchmark = self.config.get_benchmark_tests()
+        smoke = benchmark.get("smoke", {})
+
+        cases: list[TestCase] = []
+        for bench_type, case_list in smoke.items():
+            if not isinstance(case_list, list):
+                continue
+
+            pytest_path = f"tests/benchmarks/test_benchmark_{bench_type}.py"
+            if not Path(pytest_path).exists():
+                print(f"[run] Warning: benchmark test file not found: {pytest_path}")
+                continue
+
+            for case_cfg in case_list:
+                name = str(case_cfg.get("name", f"{bench_type}_unnamed"))
+                cases.append(
+                    TestCase(
+                        name=f"benchmark/{bench_type}/{name}",
+                        pytest_path=pytest_path,
+                        task="benchmark",
+                        model=bench_type,
+                        case=name,
+                        extra_args=["-v", "--tb=short", "-s"],
+                        extra_env={
+                            "FL_BENCHMARK_TYPE": bench_type,
+                            "FL_BENCHMARK_CASE": json.dumps(case_cfg),
+                        },
+                    )
+                )
+
+        return cases
+
+
     # --- Test execution ------------------------------------------------------
 
     def _run_single(self, tc: TestCase) -> TestResult:
@@ -442,10 +481,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scope",
-        choices=["all", "unit", "functional", "e2e"],
+        choices=["all", "unit", "functional", "e2e", "benchmark"],
         default="all",
         help="Which test scope to run: unit, functional (ops/compilation/"
-        "distributed), e2e (inference/serving), or all (default: all)",
+        "distributed), e2e (inference/serving), benchmark, or all (default: all)",
     )
     parser.add_argument(
         "--task",
