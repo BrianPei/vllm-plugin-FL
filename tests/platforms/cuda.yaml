@@ -108,6 +108,7 @@ a100:
           - name: serve_smoke_dummy
             server_parameters:
               model: /data/models/MiniCPM
+              tokenizer: /data/models/MiniCPM
               served_model_name: smoke-model
               tensor_parallel_size: 1
               max_model_len: 1024
@@ -116,6 +117,7 @@ a100:
               trust_remote_code: true
             client_parameters:
               model: smoke-model
+              tokenizer: /data/models/MiniCPM
               backend: openai-chat
               endpoint: /v1/chat/completions
               dataset_name: random
