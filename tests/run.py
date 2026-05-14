@@ -367,7 +367,6 @@ class TestRunner:
 
         return cases
 
-
     # --- Test execution ------------------------------------------------------
 
     def _run_single(self, tc: TestCase) -> TestResult:
