@@ -108,11 +108,26 @@ jobs:
       container_volumes: ${{ toJson(fromJson(needs.setup.outputs.config).container_volumes) }}
       container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
 
+
+  # Lightweight benchmark smoke tests.
+  # Validates vllm bench throughput/latency/serve entrypoints.
+  benchmark:
+    needs: [setup, functional]
+    uses: ./.github/workflows/_benchmark_test.yml
+    with:
+      platform: ${{ inputs.platform }}
+      ci_image: ${{ fromJson(needs.setup.outputs.config).ci_image }}
+      runner_labels: ${{ toJson(fromJson(needs.setup.outputs.config).runner_labels) }}
+      container_volumes: ${{ toJson(fromJson(needs.setup.outputs.config).container_volumes) }}
+      container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
+      timeout: 30
+
+
   # Slow end-to-end model tests (inference, serving).
   # Grouped by (task, device) — all model/case combos for the same task
   # run inside a single job to avoid repeated container startup.
   e2e:
-    needs: [setup, functional]
+    needs: [setup, benchmark]
     if: needs.setup.outputs.e2e_matrix != '[]'
     strategy:
       fail-fast: false
@@ -134,7 +149,7 @@ jobs:
   # Feishu notification — per-platform status
   # ============================================================
   notify:
-    needs: [setup, unit, functional, e2e]
+    needs: [setup, unit, functional, benchmark, e2e]
     if: always()
     uses: ./.github/workflows/_notify_feishu.yml
     with:
@@ -142,10 +157,12 @@ jobs:
       status: >-
         ${{ (needs.unit.result == 'success' &&
              needs.functional.result == 'success' &&
+             needs.benchmark.result == 'success' &&
              (needs.e2e.result == 'success' || needs.e2e.result == 'skipped'))
             && 'success'
             || (needs.unit.result == 'cancelled' ||
                 needs.functional.result == 'cancelled' ||
+                needs.benchmark.result == 'cancelled' ||
                 needs.e2e.result == 'cancelled')
                && 'cancelled'
                || 'failure' }}
