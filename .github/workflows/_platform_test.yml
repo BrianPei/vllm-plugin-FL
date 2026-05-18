@@ -109,25 +109,11 @@ jobs:
       container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
 
 
-  # Lightweight benchmark smoke tests.
-  # Validates vllm bench throughput/latency/serve entrypoints.
-  benchmark:
-    needs: [setup, functional]
-    uses: ./.github/workflows/_benchmark_test.yml
-    with:
-      platform: ${{ inputs.platform }}
-      ci_image: ${{ fromJson(needs.setup.outputs.config).ci_image }}
-      runner_labels: ${{ toJson(fromJson(needs.setup.outputs.config).runner_labels) }}
-      container_volumes: ${{ toJson(fromJson(needs.setup.outputs.config).container_volumes) }}
-      container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
-      timeout: 30
-
-
   # Slow end-to-end model tests (inference, serving).
   # Grouped by (task, device) — all model/case combos for the same task
   # run inside a single job to avoid repeated container startup.
   e2e:
-    needs: [setup, benchmark]
+    needs: [setup, functional]
     if: needs.setup.outputs.e2e_matrix != '[]'
     strategy:
       fail-fast: false
@@ -145,11 +131,23 @@ jobs:
       container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
       timeout: ${{ matrix.test.timeout || 60 }}
 
+  # Validates vllm bench throughput/latency/serve entrypoints.
+  benchmark:
+    needs: [setup, e2e]
+    uses: ./.github/workflows/_benchmark_test.yml
+    with:
+      platform: ${{ inputs.platform }}
+      ci_image: ${{ fromJson(needs.setup.outputs.config).ci_image }}
+      runner_labels: ${{ toJson(fromJson(needs.setup.outputs.config).runner_labels) }}
+      container_volumes: ${{ toJson(fromJson(needs.setup.outputs.config).container_volumes) }}
+      container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
+      timeout: 30
+
   # ============================================================
   # Feishu notification — per-platform status
   # ============================================================
   notify:
-    needs: [setup, unit, functional, benchmark, e2e]
+    needs: [unit, functional, benchmark]
     if: always()
     uses: ./.github/workflows/_notify_feishu.yml
     with:
@@ -157,13 +155,11 @@ jobs:
       status: >-
         ${{ (needs.unit.result == 'success' &&
              needs.functional.result == 'success' &&
-             needs.benchmark.result == 'success' &&
-             (needs.e2e.result == 'success' || needs.e2e.result == 'skipped'))
+             needs.benchmark.result == 'success')
             && 'success'
             || (needs.unit.result == 'cancelled' ||
                 needs.functional.result == 'cancelled' ||
-                needs.benchmark.result == 'cancelled' ||
-                needs.e2e.result == 'cancelled')
+                needs.benchmark.result == 'cancelled')
                && 'cancelled'
                || 'failure' }}
     secrets: inherit
