@@ -37,12 +37,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import yaml
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import yaml
 
 # Ensure repo root is on sys.path so ``tests.*`` imports work
 _REPO_ROOT = Path(__file__).resolve().parent.parent
