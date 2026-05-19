@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import yaml
 import subprocess
 import sys
 import time
@@ -334,12 +335,30 @@ class TestRunner:
         return self._discover_from_yaml("tests/e2e_tests")
 
     def _discover_benchmark_tests(self) -> list[TestCase]:
-        """Benchmark smoke tests configured by platform YAML."""
+        """Benchmark smoke tests selected by platform YAML."""
         benchmark = self.config.get_benchmark_tests()
-        smoke = benchmark.get("smoke", {})
+        selected_smoke = benchmark.get("smoke", [])
+
+        if not selected_smoke:
+            return []
+
+        if isinstance(selected_smoke, str):
+            selected_types = {selected_smoke}
+        else:
+            selected_types = set(selected_smoke)
+
+        config_path = Path("tests/benchmarks/configs/smoke.yaml")
+        if not config_path.exists():
+            print(f"[run] Warning: benchmark config not found: {config_path}")
+            return []
+
+        with open(config_path) as f:
+            smoke_config = yaml.safe_load(f) or {}
 
         cases: list[TestCase] = []
-        for bench_type, case_list in smoke.items():
+        for bench_type, case_list in smoke_config.items():
+            if bench_type not in selected_types:
+                continue
             if not isinstance(case_list, list):
                 continue
 
@@ -349,7 +368,39 @@ class TestRunner:
                 continue
 
             for case_cfg in case_list:
-                name = str(case_cfg.get("name", f"{bench_type}_unnamed"))
+                runtime_case = dict(case_cfg)
+                model_name = str(runtime_case.pop("model"))
+                model_case = str(runtime_case.pop("case"))
+                model_cfg = ModelConfig.load(model_name, model_case)
+
+                if "parameters" in runtime_case:
+                    params = {
+                        "model": model_cfg.model,
+                        "tokenizer": model_cfg.model,
+                        **model_cfg.engine,
+                        **runtime_case.get("parameters", {}),
+                    }
+                    runtime_case["parameters"] = params
+
+                if "server_parameters" in runtime_case:
+                    server_params = {
+                        "model": model_cfg.model,
+                        "tokenizer": model_cfg.model,
+                        **model_cfg.engine,
+                        **runtime_case.get("server_parameters", {}),
+                    }
+                    runtime_case["server_parameters"] = server_params
+
+                if "client_parameters" in runtime_case:
+                    client_params = {
+                        "tokenizer": model_cfg.model,
+                        **runtime_case.get("client_parameters", {}),
+                    }
+                    if model_cfg.engine.get("trust_remote_code"):
+                        client_params.setdefault("trust_remote_code", True)
+                    runtime_case["client_parameters"] = client_params
+
+                name = str(runtime_case.get("name", f"{bench_type}_unnamed"))
                 cases.append(
                     TestCase(
                         name=f"benchmark/{bench_type}/{name}",
@@ -360,7 +411,7 @@ class TestRunner:
                         extra_args=["-v", "--tb=short", "-s"],
                         extra_env={
                             "FL_BENCHMARK_TYPE": bench_type,
-                            "FL_BENCHMARK_CASE": json.dumps(case_cfg),
+                            "FL_BENCHMARK_CASE": json.dumps(runtime_case),
                         },
                     )
                 )
