@@ -344,7 +344,8 @@ class TestRunner:
                 continue
 
             pytest_path = f"tests/benchmarks/test_benchmark_{bench_type}.py"
-            if not Path(pytest_path).exists():
+            pytest_abspath = _REPO_ROOT / pytest_path
+            if not pytest_abspath.exists():
                 print(f"[run] Warning: benchmark test file not found: {pytest_path}")
                 continue
 

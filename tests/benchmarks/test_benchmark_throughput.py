@@ -24,5 +24,7 @@ def test_benchmark_throughput(tmp_path):
     assert output_json.exists()
 
     data = json.loads(output_json.read_text())
-    assert data.get("num_requests", 0) > 0
-    assert data.get("tokens_per_second", 0) > 0
+    num_requests = data.get("num_requests", data.get("num_prompts", 0))
+    tokens_per_second = data.get("tokens_per_second", data.get("output_throughput", 0))
+    assert num_requests > 0
+    assert tokens_per_second > 0

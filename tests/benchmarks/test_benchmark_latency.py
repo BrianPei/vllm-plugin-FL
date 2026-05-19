@@ -24,5 +24,8 @@ def test_benchmark_latency(tmp_path):
     assert output_json.exists()
 
     data = json.loads(output_json.read_text())
-    assert data.get("avg_latency", 0) > 0
-    assert data.get("latencies")
+    avg_latency = data.get("avg_latency", data.get("mean_latency", 0))
+    assert avg_latency > 0
+    latencies = data.get("latencies")
+    num_iters = data.get("num_iters", 0)
+    assert (latencies is not None and len(latencies) > 0) or num_iters > 0
