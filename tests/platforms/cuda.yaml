@@ -77,53 +77,7 @@ a100:
       include: "*"
       # Exclude patterns: empty list or list paths to exclude
       exclude: []
+    
     benchmark:
-      smoke:
-        throughput:
-          - name: throughput_smoke_dummy
-            parameters:
-              model: /data/models/Qwen/Qwen3-0.6B
-              tokenizer: /data/models/Qwen/Qwen3-0.6B
-              dataset_name: random
-              random_input_len: 32
-              random_output_len: 1
-              num_prompts: 4
-              enforce_eager: true
-              load_format: dummy
-              trust_remote_code: true
-
-        latency:
-          - name: latency_smoke_dummy
-            parameters:
-              model: /data/models/Qwen/Qwen3-0.6B
-              tokenizer: /data/models/Qwen/Qwen3-0.6B
-              input_len: 32
-              output_len: 1
-              batch_size: 1
-              num_iters_warmup: 1
-              num_iters: 2
-              enforce_eager: true
-              load_format: dummy
-              trust_remote_code: true
-
-        serve:
-          - name: serve_smoke_dummy
-            server_parameters:
-              model: /data/models/Qwen/Qwen3-0.6B
-              tokenizer: /data/models/Qwen/Qwen3-0.6B
-              served_model_name: smoke-model
-              tensor_parallel_size: 1
-              max_model_len: 1024
-              enforce_eager: true
-              load_format: dummy
-              trust_remote_code: true
-            client_parameters:
-              model: smoke-model
-              tokenizer: /data/models/Qwen/Qwen3-0.6B
-              backend: openai-chat
-              endpoint: /v1/chat/completions
-              dataset_name: random
-              random_input_len: 32
-              random_output_len: 4
-              num_prompts: 5
-              trust_remote_code: true
+      enabled: true
+      smoke: ["throughput", "latency", "serve"]
