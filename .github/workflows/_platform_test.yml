@@ -155,11 +155,12 @@ jobs:
       status: >-
         ${{ (needs.unit.result == 'success' &&
              needs.functional.result == 'success' &&
-             needs.benchmark.result == 'success')
+             (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
+             (needs.benchmark.result == 'success' || needs.benchmark.result == 'skipped'))
             && 'success'
             || (needs.unit.result == 'cancelled' ||
                 needs.functional.result == 'cancelled' ||
+                needs.e2e.result == 'cancelled' ||
                 needs.benchmark.result == 'cancelled')
                && 'cancelled'
                || 'failure' }}
-    secrets: inherit
