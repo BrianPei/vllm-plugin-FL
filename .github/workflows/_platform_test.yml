@@ -147,7 +147,7 @@ jobs:
   # Feishu notification — per-platform status
   # ============================================================
   notify:
-    needs: [unit, functional, benchmark]
+    needs: [unit, functional, e2e, benchmark]
     if: always()
     uses: ./.github/workflows/_notify_feishu.yml
     with:
