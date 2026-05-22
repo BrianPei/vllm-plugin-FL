@@ -43,7 +43,14 @@ def to_cli_args(params: dict[str, Any], skip: set[str] | None = None) -> list[st
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     """Run command and print captured output for CI logs."""
     print("[benchmark] Command:", " ".join(command))
-    result = subprocess.run(command, capture_output=True, text=True)
+
+    env = os.environ.copy()
+    local_no_proxy = "127.0.0.1,localhost,::1"
+    for key in ("NO_PROXY", "no_proxy"):
+        current = env.get(key, "")
+        env[key] = ",".join(filter(None, [current, local_no_proxy]))
+
+    result = subprocess.run(command, capture_output=True, text=True, env=env)
     print(result.stdout)
     print(result.stderr)
     return result
