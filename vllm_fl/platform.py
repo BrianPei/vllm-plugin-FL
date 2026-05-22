@@ -1,5 +1,5 @@
 # Copyright (c) 2025 BAAI. All rights reserved.
-# Adapted from https://github.com/vllm-project/vllm/blob/v0.19.0/vllm/platforms/cuda.py
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.20.2/vllm/platforms/cuda.py
 # Below is the original copyright:
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
@@ -145,6 +145,11 @@ class PlatformFL(Platform):
                 import vllm_fl.dispatch.backends.vendor.metax.patches  # noqa: F401
             except Exception as e:
                 logger.warning(f"Failed to import maca patches: {e}")
+
+    @classmethod
+    def import_ir_kernels(cls) -> None:
+        """Import IR kernel modules. OOT platforms override to import their own."""
+        import vllm.kernels  # noqa: F401
 
     @classmethod
     def check_and_update_config(cls, vllm_config: "VllmConfig") -> None:
@@ -403,6 +408,13 @@ class PlatformFL(Platform):
             return None        
         major, minor = torch.cuda.get_device_capability(device_id)
         return DeviceCapability(major=major, minor=minor)
+    
+    @classmethod
+    def support_deep_gemm(cls) -> bool:
+        """Currently, only Hopper and Blackwell GPUs are supported."""
+        if cls.device_type == "cuda" and cls.vendor_name == "nvidia":
+            return cls.is_device_capability(90) or cls.is_device_capability_family(100)
+        return False
 
     @classmethod
     def is_fully_connected(cls, physical_device_ids: list[int]) -> bool:
@@ -436,3 +448,23 @@ class PlatformFL(Platform):
             return True
         except:
             return False
+
+    @classmethod
+    def manual_seed_all(cls, seed: int) -> None:
+        """Set RNG seed across all devices for the current platform."""
+        # torch_ptpu.ptpu doesn't have manual_seed_all, implement it manually
+        if hasattr(cls.torch_device_fn, 'manual_seed_all'):
+            cls.torch_device_fn.manual_seed_all(seed)
+        else:
+            # Fallback for devices without manual_seed_all (e.g., ptpu)
+            torch.manual_seed(seed)
+            if hasattr(cls.torch_device_fn, 'device_count') and hasattr(cls.torch_device_fn, '_get_or_create_default_generator'):
+                # Set seed for each device's default generator
+                for device_id in range(cls.torch_device_fn.device_count()):
+                    generator = cls.torch_device_fn._get_or_create_default_generator(device_id)
+                    generator.manual_seed(seed)
+
+    @classmethod
+    def is_integrated_gpu(cls, device_id: int = 0) -> bool:
+        """Returns whether the GPU is an integrated (UMA) device."""
+        return False
