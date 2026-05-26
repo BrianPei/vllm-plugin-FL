@@ -90,7 +90,6 @@ jobs:
       - name: Upload benchmark data to backend
         if: always() && steps.benchmark_test.outcome == 'success'
         uses: flagos-ai/FlagOps/actions/post-benchmark-report@main
-        continue-on-error: true
         env:
           NO_PROXY: "flagcicd-inner.flagos.net"
         with:
