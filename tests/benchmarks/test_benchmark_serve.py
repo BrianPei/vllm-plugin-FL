@@ -6,7 +6,12 @@ import json
 
 import pytest
 
-from tests.benchmarks.utils import load_benchmark_case, run_command, to_cli_args
+from tests.benchmarks.utils import (
+    benchmark_result_file,
+    load_benchmark_case,
+    run_command,
+    to_cli_args,
+)
 from tests.e2e_tests.serving.server_helper import VllmServer
 
 
@@ -22,7 +27,7 @@ def test_benchmark_serve(tmp_path):
     tp_size = int(server_params.pop("tensor_parallel_size", 1))
     server_extra_args = to_cli_args(server_params)
 
-    result_json = tmp_path / "serve_result.json"
+    result_json = benchmark_result_file(tmp_path, "serve_result.json")
 
     with VllmServer(
         model=model,
@@ -44,7 +49,7 @@ def test_benchmark_serve(tmp_path):
             [
                 "--save-result",
                 "--result-dir",
-                str(tmp_path),
+                str(result_json.parent),
                 "--result-filename",
                 result_json.name,
             ]
