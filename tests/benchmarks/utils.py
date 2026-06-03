@@ -42,9 +42,8 @@ def to_cli_args(params: dict[str, Any], skip: set[str] | None = None) -> list[st
 
 
 def benchmark_result_file(tmp_path: Path, filename: str) -> Path:
-    """Return a stable result path when CI sets a benchmark result directory."""
-    result_dir = os.environ.get("FL_BENCHMARK_RESULT_DIR")
-    base_dir = Path(result_dir) if result_dir else tmp_path
+    """Return a stable result path for CI artifacts."""
+    base_dir = Path("benchmark-results") if os.environ.get("CI") else tmp_path
     base_dir.mkdir(parents=True, exist_ok=True)
     return base_dir / filename
 

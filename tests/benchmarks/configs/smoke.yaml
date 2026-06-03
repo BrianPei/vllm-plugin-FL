@@ -4,7 +4,7 @@ throughput:
     case: 06b_tp2
     parameters:
       max_model_len: 1024
-      gpu_memory_utilization: 0.3
+      gpu_memory_utilization: 0.7
       max_num_seqs: 4
       dataset_name: random
       random_input_len: 32
@@ -19,7 +19,7 @@ latency:
     case: 06b_tp2
     parameters:
       max_model_len: 1024
-      gpu_memory_utilization: 0.3
+      gpu_memory_utilization: 0.7
       max_num_seqs: 4
       input_len: 32
       output_len: 1
@@ -37,7 +37,7 @@ serve:
       served_model_name: smoke-model
       tensor_parallel_size: 1
       max_model_len: 1024
-      gpu_memory_utilization: 0.3
+      gpu_memory_utilization: 0.7
       max_num_seqs: 4
       enforce_eager: true
       load_format: dummy

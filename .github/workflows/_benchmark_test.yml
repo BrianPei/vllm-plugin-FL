@@ -21,6 +21,11 @@ on:
         description: "JSON array of runner labels"
         required: true
         type: string
+      runner_set_name:
+        description: "FlagCICD runner set name"
+        required: false
+        type: string
+        default: ""
       container_volumes:
         description: "JSON array of volume mounts"
         required: false
@@ -46,8 +51,6 @@ jobs:
       image: ${{ inputs.ci_image }}
       volumes: ${{ fromJson(inputs.container_volumes) }}
       options: ${{ inputs.container_options }}
-    env:
-      FL_BENCHMARK_RESULT_DIR: benchmark-results
 
     steps:
       - name: Checkout (attempt 1)
@@ -80,12 +83,8 @@ jobs:
         if: always() && steps.benchmark_test.outcome == 'success'
         run: |
           python tests/benchmarks/format_serve_report.py \
-            --input "${FL_BENCHMARK_RESULT_DIR}/serve_result.json" \
-            --output "${FL_BENCHMARK_RESULT_DIR}/benchmark_metrics.json"
-
-      - name: Install jq
-        if: always() && steps.benchmark_test.outcome == 'success'
-        run: apt-get update && apt-get install -y jq
+            --input benchmark-results/serve_result.json \
+            --output benchmark-results/benchmark_metrics.json
 
       - name: Upload benchmark data to backend
         if: always() && steps.benchmark_test.outcome == 'success'
@@ -102,6 +101,7 @@ jobs:
           repository_name: '${{ github.repository }}'
           commit_id: ${{ github.event.pull_request.head.sha || github.sha }}
           workflow_id: ${{ github.run_id }}
+          runner_set_name: ${{ inputs.runner_set_name }}
           fail_on_error: 'false'
 
       - name: Upload test results

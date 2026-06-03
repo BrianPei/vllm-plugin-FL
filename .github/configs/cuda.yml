@@ -8,7 +8,14 @@ ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.20.2-cuda-ci
 
 # Runner labels for this hardware (self-hosted)
 runner_labels:
-  - ci-vllm-plugin-fl
+  - self-hosted
+  - Linux
+  - X64
+  - nvidia
+  - gpu-8
+  - cuda130
+
+runner_set_name: cuda130
 
 # Runner labels for this hardware (Platform hosted)
 # runner_labels:

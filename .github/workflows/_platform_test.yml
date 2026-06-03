@@ -139,6 +139,7 @@ jobs:
       platform: ${{ inputs.platform }}
       ci_image: ${{ fromJson(needs.setup.outputs.config).ci_image }}
       runner_labels: ${{ toJson(fromJson(needs.setup.outputs.config).runner_labels) }}
+      runner_set_name: ${{ fromJson(needs.setup.outputs.config).runner_set_name || inputs.platform }}
       container_volumes: ${{ toJson(fromJson(needs.setup.outputs.config).container_volumes) }}
       container_options: ${{ fromJson(needs.setup.outputs.config).container_options }}
       timeout: 30
