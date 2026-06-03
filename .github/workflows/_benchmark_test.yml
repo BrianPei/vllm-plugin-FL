@@ -86,6 +86,10 @@ jobs:
             --input benchmark-results/serve_result.json \
             --output benchmark-results/benchmark_metrics.json
 
+      - name: Install jq
+        if: always() && steps.benchmark_test.outcome == 'success'
+        run: apt-get update && apt-get install -y jq
+
       - name: Upload benchmark data to backend
         if: always() && steps.benchmark_test.outcome == 'success'
         uses: flagos-ai/FlagOps/actions/post-benchmark-report@main
