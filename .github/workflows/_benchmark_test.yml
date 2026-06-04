@@ -21,11 +21,6 @@ on:
         description: "JSON array of runner labels"
         required: true
         type: string
-      runner_set_name:
-        description: "FlagCICD runner set name"
-        required: false
-        type: string
-        default: ""
       container_volumes:
         description: "JSON array of volume mounts"
         required: false
@@ -105,7 +100,6 @@ jobs:
           repository_name: '${{ github.repository }}'
           commit_id: ${{ github.event.pull_request.head.sha || github.sha }}
           workflow_id: ${{ github.run_id }}
-          runner_set_name: ${{ inputs.runner_set_name }}
           fail_on_error: 'false'
 
       - name: Upload test results

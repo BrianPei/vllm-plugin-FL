@@ -15,8 +15,6 @@ runner_labels:
   - gpu-8
   - cuda130
 
-runner_set_name: cuda130
-
 # Runner labels for this hardware (Platform hosted)
 # runner_labels:
 #   - ci-vllm-plugin-fl
