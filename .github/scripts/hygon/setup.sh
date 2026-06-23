@@ -8,7 +8,9 @@ git config --global --add safe.directory "$(pwd)"
 if command -v uv >/dev/null 2>&1; then
   uv pip install --system --upgrade pip
   uv pip install --system --no-build-isolation -e ".[test]"
+  uv pip install --system pytest-cov pytest-json-report
 else
   python -m pip install --upgrade pip
   python -m pip install --no-build-isolation -e ".[test]"
+  python -m pip install pytest-cov pytest-json-report
 fi
