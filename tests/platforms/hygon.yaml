@@ -27,7 +27,7 @@ bw1000:
       inference:
         qwen3_6: ["27b_tp2_eager"]
       serving:
-        qwen3_6: ["27b_tp2_eager"]
+        qwen3_6: ["35b_a3b_tp2_eager"]
     functional:
       include: "*"
       exclude: []
