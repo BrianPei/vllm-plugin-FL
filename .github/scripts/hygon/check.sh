@@ -3,6 +3,7 @@
 # Check Hygon DCU availability.
 set -euo pipefail
 
+echo "Current time: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=== Checking Hygon DCU availability ==="
 
 command -v hy-smi

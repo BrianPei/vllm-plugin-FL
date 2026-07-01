@@ -29,17 +29,10 @@ bw1000:
       serving:
         qwen3_6: ["27b_tp2_eager"]
     functional:
-      include:
-        - TestAllReduceCorrectness
-        - TestReduceScatterCorrectness
-        - TestAllGatherCorrectness
-        - TestSendRecvCorrectness
-        - TestCommunicatorDisabled
-        - TestDistributedUtils
+      include: "*"
       exclude: []
     unit:
-      include:
-        - test_public_git_exports_shape
+      include: "*"
       exclude: []
     benchmark:
       enabled: true
