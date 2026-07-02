@@ -13,6 +13,7 @@ runner_labels:
 # Container volumes (hardware-specific paths).
 container_volumes:
   - /opt/hyhal:/opt/hyhal:ro
+  - /usr/local/hyhal:/usr/local/hyhal:ro
   - /data:/data
   - /workspace:/workspace
 
