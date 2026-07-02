@@ -5,9 +5,26 @@ set -euo pipefail
 
 git config --global --add safe.directory "$(pwd)"
 
+HYGON_SEARCH_ROOTS=()
+for root in \
+  /opt/hyhal \
+  /usr/local/hyhal \
+  /opt/dtk \
+  /usr/local/dtk \
+  /usr/local/lib \
+  /usr/local/lib64 \
+  /usr/lib \
+  /usr/lib64 \
+  /lib \
+  /lib64; do
+  [[ -e "${root}" ]] && HYGON_SEARCH_ROOTS+=("${root}")
+done
+
+echo "Searching Hygon runtime libraries in: ${HYGON_SEARCH_ROOTS[*]}"
+
 mapfile -t HYGON_LIB_DIRS < <(
   {
-    find -L /opt/hyhal /usr/local/hyhal -name "libgalaxyhip.so*" \
+    find -L "${HYGON_SEARCH_ROOTS[@]}" -name "libgalaxyhip.so*" \
       -exec dirname {} \; 2>/dev/null || true
     for dir in \
       /opt/hyhal/lib \
@@ -39,6 +56,9 @@ if [[ "${#HYGON_LIB_DIRS[@]}" -gt 0 ]]; then
 else
   echo "::warning::No Hygon library directories found under /opt/hyhal."
 fi
+
+find -L "${HYGON_SEARCH_ROOTS[@]}" -name "libgalaxyhip.so*" -print 2>/dev/null || true
+ldconfig -p 2>/dev/null | grep -F "libgalaxyhip" || true
 
 TEST_DEPS=(
   pytest
