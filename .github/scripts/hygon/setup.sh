@@ -5,6 +5,26 @@ set -euo pipefail
 
 git config --global --add safe.directory "$(pwd)"
 
+mapfile -t HYGON_LIB_DIRS < <(
+  {
+    find /opt/hyhal -type f -name "libgalaxyhip.so*" -printf "%h\n" 2>/dev/null || true
+    for dir in /opt/hyhal/lib /opt/hyhal/lib64 /opt/hyhal/hip/lib; do
+      [[ -d "${dir}" ]] && echo "${dir}"
+    done
+  } | awk '!seen[$0]++'
+)
+
+if [[ "${#HYGON_LIB_DIRS[@]}" -gt 0 ]]; then
+  HYGON_LD_LIBRARY_PATH="$(IFS=:; echo "${HYGON_LIB_DIRS[*]}")"
+  export LD_LIBRARY_PATH="${HYGON_LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  if [[ -n "${GITHUB_ENV:-}" ]]; then
+    echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> "${GITHUB_ENV}"
+  fi
+  echo "Configured Hygon LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
+else
+  echo "::warning::No Hygon library directories found under /opt/hyhal."
+fi
+
 TEST_DEPS=(
   pytest
   pytest-cov
