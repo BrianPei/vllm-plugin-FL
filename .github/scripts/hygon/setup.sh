@@ -7,8 +7,19 @@ git config --global --add safe.directory "$(pwd)"
 
 mapfile -t HYGON_LIB_DIRS < <(
   {
-    find /opt/hyhal -type f -name "libgalaxyhip.so*" -printf "%h\n" 2>/dev/null || true
-    for dir in /opt/hyhal/lib /opt/hyhal/lib64 /opt/hyhal/hip/lib; do
+    find -L /opt/hyhal /usr/local/hyhal -name "libgalaxyhip.so*" \
+      -exec dirname {} \; 2>/dev/null || true
+    for dir in \
+      /opt/hyhal/lib \
+      /opt/hyhal/lib64 \
+      /opt/hyhal/hip/lib \
+      /opt/hyhal/hip/lib64 \
+      /opt/hyhal/lib/x86_64-linux-gnu \
+      /usr/local/hyhal/lib \
+      /usr/local/hyhal/lib64 \
+      /usr/local/hyhal/hip/lib \
+      /usr/local/hyhal/hip/lib64 \
+      /usr/local/hyhal/lib/x86_64-linux-gnu; do
       [[ -d "${dir}" ]] && echo "${dir}"
     done
   } | awk '!seen[$0]++'
@@ -19,6 +30,10 @@ if [[ "${#HYGON_LIB_DIRS[@]}" -gt 0 ]]; then
   export LD_LIBRARY_PATH="${HYGON_LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
   if [[ -n "${GITHUB_ENV:-}" ]]; then
     echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> "${GITHUB_ENV}"
+  fi
+  if command -v ldconfig >/dev/null 2>&1 && [[ -w /etc/ld.so.conf.d ]]; then
+    printf "%s\n" "${HYGON_LIB_DIRS[@]}" > /etc/ld.so.conf.d/hygon.conf
+    ldconfig
   fi
   echo "Configured Hygon LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
 else
@@ -46,3 +61,9 @@ else
   python -m pip install --no-build-isolation -e . --no-deps
   python -m pip install "${TEST_DEPS[@]}"
 fi
+
+python - <<'PY'
+import torch
+
+print(f"Torch import ok: {torch.__version__}")
+PY
