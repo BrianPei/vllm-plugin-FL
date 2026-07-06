@@ -5,6 +5,7 @@ set -euo pipefail
 
 git config --global --add safe.directory "$(pwd)"
 
+export GEMS_VENDOR="${GEMS_VENDOR:-hygon}"
 export DTK_HOME="${DTK_HOME:-/opt/dtk}"
 export ROCM_PATH="${ROCM_PATH:-${DTK_HOME}}"
 export HIP_PATH="${HIP_PATH:-${DTK_HOME}/hip}"
@@ -19,6 +20,7 @@ export LD_LIBRARY_PATH="${DTK_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH
 
 if [[ -n "${GITHUB_ENV:-}" ]]; then
   for name in \
+    GEMS_VENDOR \
     DTK_HOME \
     ROCM_PATH \
     HIP_PATH \
@@ -41,12 +43,20 @@ TEST_DEPS=(
   pytest-cov
   pytest-timeout
   pytest-json-report
+  scikit-build-core==0.11
+  pybind11
+  ninja
+  cmake
   numpy
   requests
   openai
   decorator
   pyyaml
+  sqlalchemy
 )
+
+FLAGGEMS_REF="8d23621eb1381ae96b315a9287ce3cc555433824"
+FLAGGEMS_SOURCE="${FLAGGEMS_PATH:-/workspace/FlagGems}"
 
 if command -v uv >/dev/null 2>&1; then
   uv pip install --system --upgrade pip
@@ -58,9 +68,35 @@ else
   python -m pip install "${TEST_DEPS[@]}"
 fi
 
+test -d "${FLAGGEMS_SOURCE}/src/flag_gems"
+git config --global --add safe.directory "${FLAGGEMS_SOURCE}"
+
+FLAGGEMS_HEAD="$(git -C "${FLAGGEMS_SOURCE}" rev-parse HEAD)"
+if [[ "${FLAGGEMS_HEAD}" != "${FLAGGEMS_REF}" ]]; then
+  echo "Unexpected FlagGems commit: ${FLAGGEMS_HEAD}; expected ${FLAGGEMS_REF}."
+  exit 1
+fi
+
+if ! grep -q 'kwargs.pop("num_ldmatrixes", None)' \
+  "${FLAGGEMS_SOURCE}/src/flag_gems/runtime/configloader.py"; then
+  echo "FlagGems num_ldmatrixes compatibility patch is missing."
+  exit 1
+fi
+
+FLAGGEMS_DIR="$(mktemp -d)/FlagGems"
+cp -a "${FLAGGEMS_SOURCE}" "${FLAGGEMS_DIR}"
+
+if command -v uv >/dev/null 2>&1; then
+  uv pip install --system --no-build-isolation -e "${FLAGGEMS_DIR}" --no-deps
+else
+  python -m pip install --no-build-isolation -e "${FLAGGEMS_DIR}" --no-deps
+fi
+
 python - <<'PY'
+import flag_gems
 import torch
 
+print(f"FlagGems import ok: {getattr(flag_gems, '__version__', 'unknown')}")
 print(f"Torch import ok: {torch.__version__}")
 print(f"Accelerator available: {torch.cuda.is_available()}")
 print(f"Accelerator count: {torch.cuda.device_count()}")
