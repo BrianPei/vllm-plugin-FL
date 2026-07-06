@@ -21,6 +21,7 @@ container_options: >-
   --hostname vllm-plugin-fl
   --ipc=host
   --env DTK_HOME=/opt/dtk
+  --env GEMS_VENDOR=hygon
   --env ROCM_PATH=/opt/dtk
   --env HIP_PATH=/opt/dtk/hip
   --env HSA_PATH=/opt/dtk/hsa
