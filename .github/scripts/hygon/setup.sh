@@ -5,60 +5,36 @@ set -euo pipefail
 
 git config --global --add safe.directory "$(pwd)"
 
-HYGON_SEARCH_ROOTS=()
-for root in \
-  /opt/hyhal \
-  /usr/local/hyhal \
-  /opt/dtk \
-  /usr/local/dtk \
-  /usr/local/lib \
-  /usr/local/lib64 \
-  /usr/lib \
-  /usr/lib64 \
-  /lib \
-  /lib64; do
-  [[ -e "${root}" ]] && HYGON_SEARCH_ROOTS+=("${root}")
-done
+export DTK_HOME="${DTK_HOME:-/opt/dtk}"
+export ROCM_PATH="${ROCM_PATH:-${DTK_HOME}}"
+export HIP_PATH="${HIP_PATH:-${DTK_HOME}/hip}"
+export HSA_PATH="${HSA_PATH:-${DTK_HOME}/hsa}"
+export HIP_CLANG_PATH="${HIP_CLANG_PATH:-${DTK_HOME}/llvm/bin}"
+export DEVICE_LIB_PATH="${DEVICE_LIB_PATH:-${DTK_HOME}/amdgcn/bitcode}"
 
-echo "Searching Hygon runtime libraries in: ${HYGON_SEARCH_ROOTS[*]}"
+DTK_PATH="${DTK_HOME}/bin:${HIP_PATH}/bin:${HIP_CLANG_PATH}"
+DTK_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:${HIP_PATH}/lib:${DTK_HOME}/lib:${DTK_HOME}/llvm/lib:${DTK_HOME}/dcc/lib:${HSA_PATH}/lib"
+export PATH="${DTK_PATH}:${PATH}"
+export LD_LIBRARY_PATH="${DTK_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
-mapfile -t HYGON_LIB_DIRS < <(
-  {
-    find -L "${HYGON_SEARCH_ROOTS[@]}" -name "libgalaxyhip.so*" \
-      -exec dirname {} \; 2>/dev/null || true
-    for dir in \
-      /opt/hyhal/lib \
-      /opt/hyhal/lib64 \
-      /opt/hyhal/hip/lib \
-      /opt/hyhal/hip/lib64 \
-      /opt/hyhal/lib/x86_64-linux-gnu \
-      /usr/local/hyhal/lib \
-      /usr/local/hyhal/lib64 \
-      /usr/local/hyhal/hip/lib \
-      /usr/local/hyhal/hip/lib64 \
-      /usr/local/hyhal/lib/x86_64-linux-gnu; do
-      [[ -d "${dir}" ]] && echo "${dir}"
-    done
-  } | awk '!seen[$0]++'
-)
-
-if [[ "${#HYGON_LIB_DIRS[@]}" -gt 0 ]]; then
-  HYGON_LD_LIBRARY_PATH="$(IFS=:; echo "${HYGON_LIB_DIRS[*]}")"
-  export LD_LIBRARY_PATH="${HYGON_LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-  if [[ -n "${GITHUB_ENV:-}" ]]; then
-    echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> "${GITHUB_ENV}"
-  fi
-  if command -v ldconfig >/dev/null 2>&1 && [[ -w /etc/ld.so.conf.d ]]; then
-    printf "%s\n" "${HYGON_LIB_DIRS[@]}" > /etc/ld.so.conf.d/hygon.conf
-    ldconfig
-  fi
-  echo "Configured Hygon LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
-else
-  echo "::warning::No Hygon library directories found under /opt/hyhal."
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  for name in \
+    DTK_HOME \
+    ROCM_PATH \
+    HIP_PATH \
+    HSA_PATH \
+    HIP_CLANG_PATH \
+    DEVICE_LIB_PATH \
+    PATH \
+    LD_LIBRARY_PATH; do
+    echo "${name}=${!name}" >> "${GITHUB_ENV}"
+  done
 fi
 
-find -L "${HYGON_SEARCH_ROOTS[@]}" -name "libgalaxyhip.so*" -print 2>/dev/null || true
-ldconfig -p 2>/dev/null | grep -F "libgalaxyhip" || true
+echo "DTK_HOME=${DTK_HOME}"
+echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
+test -e "${HIP_PATH}/lib/libgalaxyhip.so.5"
+test -e "${DTK_HOME}/llvm/lib/libomp.so"
 
 TEST_DEPS=(
   pytest
