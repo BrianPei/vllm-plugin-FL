@@ -188,7 +188,6 @@ elif [[ "${PLATFORM}" == "hygon" ]]; then
         --build-arg "HYGON_BASE_IMAGE=${HYGON_BASE_IMAGE}"
         --build-arg "PYTHON_VERSION=${HYGON_PYTHON_VERSION}"
         --build-arg "VLLM_VERSION=${HYGON_VLLM_VERSION}"
-        --build-arg "UV_VERSION=${UV_VERSION}"
         --build-arg "INDEX_URL=${INDEX_URL}"
         --build-arg "EXTRA_INDEX_URL=${EXTRA_INDEX_URL}"
         --build-arg "FLAGGEMS_VERSION=${FLAGGEMS_VERSION}"

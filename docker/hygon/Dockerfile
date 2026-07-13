@@ -6,7 +6,6 @@ FROM ${HYGON_BASE_IMAGE} AS base
 ARG VLLM_VERSION=0.20.2
 ARG PYTHON_VERSION=3.10
 ARG UBUNTU_VERSION=22.04
-ARG UV_VERSION=0.7.12
 ARG INDEX_URL
 ARG EXTRA_INDEX_URL
 
@@ -18,17 +17,13 @@ ENV DTK_HOME=/opt/dtk \
     HIP_CLANG_PATH=/opt/dtk/llvm/bin \
     DEVICE_LIB_PATH=/opt/dtk/amdgcn/bitcode \
     GEMS_VENDOR=hygon \
-    USE_FLAGGEMS=1 \
-    VLLM_PLUGINS=fl \
-    VLLM_VENDOR=cuda
+    VLLM_PLUGINS=fl
 ENV PATH="/root/.local/bin:/opt/dtk/bin:/opt/dtk/hip/bin:/opt/dtk/llvm/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:/opt/dtk/hip/lib:/opt/dtk/lib:/opt/dtk/llvm/lib:/opt/dtk/dcc/lib:/opt/dtk/aillvm/lib:/opt/dtk/hsa/lib:${LD_LIBRARY_PATH}"
 
-# Install uv if the base image does not already provide it.
-RUN if ! command -v uv >/dev/null 2>&1; then \
-        curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh; \
-    fi \
-    && uv pip install --system \
+# Keep the Hygon image path aligned with Hu's flow and avoid an extra
+# dependency on astral.sh during CI image builds.
+RUN python -m pip install --upgrade \
         ${INDEX_URL:+--index-url ${INDEX_URL}} \
         ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
         pip setuptools wheel setuptools-scm
@@ -48,23 +43,6 @@ RUN python -m pip uninstall -y vllm || true \
 
 WORKDIR /workspace
 
-# ---------- dev stage ----------
-FROM base AS dev
-
-ARG INDEX_URL
-ARG EXTRA_INDEX_URL
-
-RUN uv pip install --system \
-        ${INDEX_URL:+--index-url ${INDEX_URL}} \
-        ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
-        pytest \
-        pytest-cov \
-        pytest-json-report \
-        ruff \
-        pre-commit \
-        ninja \
-        cmake
-
 # ---------- ci stage ----------
 FROM base AS ci
 
@@ -73,7 +51,7 @@ ARG EXTRA_INDEX_URL
 ARG FLAGGEMS_VERSION=62d70b9e858ec407572153ee8cdf65cc24a637d5
 
 # Install dev/test tools in the image instead of every CI job.
-RUN uv pip install --system \
+RUN python -m pip install \
         ${INDEX_URL:+--index-url ${INDEX_URL}} \
         ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
         pytest \
@@ -86,12 +64,6 @@ RUN uv pip install --system \
         decorator \
         pyyaml \
         sqlalchemy \
-        pycountry \
-        soundfile \
-        librosa \
-        "modelscope>=1.18.1" \
-        ruff \
-        pre-commit \
         setuptools-scm \
         scikit-build-core==0.11 \
         pybind11 \
@@ -104,6 +76,25 @@ RUN rm -rf /workspace/FlagGems \
     && cd /workspace/FlagGems \
     && git checkout "${FLAGGEMS_VERSION}" \
     && python -m pip install --no-build-isolation -e .
+
+WORKDIR /workspace
+
+# ---------- dev stage ----------
+FROM base AS dev
+
+ARG INDEX_URL
+ARG EXTRA_INDEX_URL
+
+RUN python -m pip install \
+        ${INDEX_URL:+--index-url ${INDEX_URL}} \
+        ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
+        pytest \
+        pytest-cov \
+        pytest-json-report \
+        ruff \
+        pre-commit \
+        ninja \
+        cmake
 
 WORKDIR /workspace
 
