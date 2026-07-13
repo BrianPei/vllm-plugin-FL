@@ -21,8 +21,7 @@ ENV DTK_HOME=/opt/dtk \
 ENV PATH="/root/.local/bin:/opt/dtk/bin:/opt/dtk/hip/bin:/opt/dtk/llvm/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:/opt/dtk/hip/lib:/opt/dtk/lib:/opt/dtk/llvm/lib:/opt/dtk/dcc/lib:/opt/dtk/aillvm/lib:/opt/dtk/hsa/lib:${LD_LIBRARY_PATH}"
 
-# Keep the Hygon image path aligned with Hu's flow and avoid an extra
-# dependency on astral.sh during CI image builds.
+# Prepare Python build tooling for editable source installs.
 RUN python -m pip install --upgrade \
         ${INDEX_URL:+--index-url ${INDEX_URL}} \
         ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
@@ -49,6 +48,7 @@ FROM base AS ci
 ARG INDEX_URL
 ARG EXTRA_INDEX_URL
 ARG FLAGGEMS_VERSION=62d70b9e858ec407572153ee8cdf65cc24a637d5
+ARG VLLM_PLUGIN_FL_VERSION=ffa2ee3eb3831f3873dd0966d12fc8e0b4e6e3d4
 
 # Install dev/test tools in the image instead of every CI job.
 RUN python -m pip install \
@@ -70,12 +70,19 @@ RUN python -m pip install \
         ninja \
         cmake
 
-# Install FlagGems from the Hygon-validated source commit.
+# Install FlagGems from the pinned source commit.
 RUN rm -rf /workspace/FlagGems \
     && git clone https://github.com/flagos-ai/FlagGems /workspace/FlagGems \
     && cd /workspace/FlagGems \
     && git checkout "${FLAGGEMS_VERSION}" \
     && python -m pip install --no-build-isolation -e .
+
+# Install vllm-plugin-FL from the pinned source commit.
+RUN rm -rf /workspace/vllm-plugin-FL \
+    && git clone https://github.com/flagos-ai/vllm-plugin-FL /workspace/vllm-plugin-FL \
+    && cd /workspace/vllm-plugin-FL \
+    && git checkout "${VLLM_PLUGIN_FL_VERSION}" \
+    && VLLM_VENDOR=cuda python -m pip install --no-build-isolation -e .
 
 WORKDIR /workspace
 

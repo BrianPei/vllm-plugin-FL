@@ -21,6 +21,7 @@ HYGON_VLLM_VERSION="${HYGON_VLLM_VERSION:-0.20.2}"
 HYGON_DTK_VERSION="${HYGON_DTK_VERSION:-26.04}"
 HYGON_PYTHON_VERSION="${HYGON_PYTHON_VERSION:-3.10}"
 FLAGGEMS_VERSION="${FLAGGEMS_VERSION:-62d70b9e858ec407572153ee8cdf65cc24a637d5}"
+VLLM_PLUGIN_FL_VERSION="${VLLM_PLUGIN_FL_VERSION:-ffa2ee3eb3831f3873dd0966d12fc8e0b4e6e3d4}"
 
 # ---- Build options ----
 PLATFORM="${PLATFORM:-cuda}"
@@ -78,6 +79,7 @@ VERSIONS (override via environment variables):
     HYGON_DTK_VERSION    DTK version used in generated image tag (default: ${HYGON_DTK_VERSION})
     HYGON_PYTHON_VERSION Python version in Hygon base image tag (default: ${HYGON_PYTHON_VERSION})
     FLAGGEMS_VERSION     FlagGems git ref (default: ${FLAGGEMS_VERSION})
+    VLLM_PLUGIN_FL_VERSION vllm-plugin-FL git ref (default: ${VLLM_PLUGIN_FL_VERSION})
 
 EXAMPLES:
     # Build CUDA dev image
@@ -191,6 +193,7 @@ elif [[ "${PLATFORM}" == "hygon" ]]; then
         --build-arg "INDEX_URL=${INDEX_URL}"
         --build-arg "EXTRA_INDEX_URL=${EXTRA_INDEX_URL}"
         --build-arg "FLAGGEMS_VERSION=${FLAGGEMS_VERSION}"
+        --build-arg "VLLM_PLUGIN_FL_VERSION=${VLLM_PLUGIN_FL_VERSION}"
     )
     if [[ -z "${IMAGE_TAG}" ]]; then
         IMAGE_TAG="hygon-vllm${VLLM_VERSION}-dtk${HYGON_DTK_VERSION}-py${HYGON_PYTHON_VERSION}-${TARGET}"
@@ -214,6 +217,7 @@ elif [[ "${PLATFORM}" == "hygon" ]]; then
     msg "  Hygon Python:   ${HYGON_PYTHON_VERSION}"
     msg "  Base image:     ${HYGON_BASE_IMAGE}"
     msg "  FlagGems:       ${FLAGGEMS_VERSION}"
+    msg "  Plugin:         ${VLLM_PLUGIN_FL_VERSION}"
 fi
 msg "  Ubuntu:         ${UBUNTU_VERSION}"
 msg "  Python:         ${PYTHON_VERSION}"
