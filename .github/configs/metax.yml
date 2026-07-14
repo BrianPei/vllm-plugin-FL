@@ -1,0 +1,29 @@
+# MetaX Hardware Configuration
+# This file defines CI/CD settings for MetaX C550 testing.
+
+platform: metax
+
+# Docker image for this hardware.
+ci_image: cr.metax-tech.com/public-ai-release/maca/vllm-metax:0.20.0-maca.ai3.7.0.107-torch2.8-py312-ubuntu22.04-amd64
+
+# Runner labels for this hardware.
+# Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
+runner_labels:
+  - mx-cicd-vllm-plugin
+
+# Container volumes (hardware-specific paths).
+container_volumes:
+  - /data:/data
+  - /workspace:/workspace
+
+# Container options (hardware-specific settings).
+container_options: >-
+  --hostname vllm-plugin-fl
+  --network host
+  --ipc=host
+  --shm-size=64g
+  --device /dev/dri:/dev/dri:rwm
+  --device /dev/mxcd:/dev/mxcd:rwm
+  --env GEMS_VENDOR=metax
+  --env VLLM_PLUGINS=fl
+  --env MACA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
