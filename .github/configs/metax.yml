@@ -12,9 +12,12 @@ runner_labels:
   - self-hosted
   - mx-cicd-vllm-plugin
 
-# The runner currently has no /MXC550/share/models directory. Add a /data
-# mount here when model-backed E2E cases are enabled in tests/platforms/metax.yaml.
-container_volumes: []
+# Keep model paths consistent with the shared test configurations used by all
+# platforms. Qwen3.6 models live under /workspace and benchmark models under
+# /data/models.
+container_volumes:
+  - /workspace:/workspace
+  - /data:/data
 
 # MetaX devices are exposed directly; Docker's --gpus option is not used.
 container_options: >-

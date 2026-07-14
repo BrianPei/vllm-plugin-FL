@@ -27,10 +27,10 @@ c550:
   name: "c550"
   tests:
     e2e:
-      # The metax-124 runner currently has no model directory. Keep E2E empty
-      # until /data/models is provisioned and mounted in .github/configs/metax.yml.
-      inference: {}
-      serving: {}
+      inference:
+        qwen3_6: ["27b_tp2_eager"]
+      serving:
+        qwen3_6: ["35b_a3b_tp2_eager"]
     functional:
       include: "*"
       # The validated MetaX setup uses eager mode and does not support graph capture.
@@ -39,4 +39,5 @@ c550:
       include: "*"
       exclude: []
     benchmark:
-      enabled: false
+      enabled: true
+      smoke: ["throughput", "latency", "serve"]
