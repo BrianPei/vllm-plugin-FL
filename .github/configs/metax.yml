@@ -19,7 +19,6 @@ container_volumes:
 # Container options (hardware-specific settings).
 container_options: >-
   --hostname vllm-plugin-fl
-  --network host
   --ipc=host
   --shm-size=64g
   --device /dev/dri:/dev/dri:rwm
