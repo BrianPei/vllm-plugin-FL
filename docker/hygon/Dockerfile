@@ -19,7 +19,10 @@ ENV DTK_HOME=/opt/dtk \
     GEMS_VENDOR=hygon \
     VLLM_PLUGINS=fl
 ENV PATH="/root/.local/bin:/opt/dtk/bin:/opt/dtk/hip/bin:/opt/dtk/llvm/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:/opt/dtk/hip/lib:/opt/dtk/lib:/opt/dtk/llvm/lib:/opt/dtk/dcc/lib:/opt/dtk/aillvm/lib:/opt/dtk/hsa/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:/usr/local/hyhal/lib:/opt/dtk/hip/lib:/opt/dtk/lib:/opt/dtk/llvm/lib:/opt/dtk/dcc/lib:/opt/dtk/aillvm/lib:/opt/dtk/hsa/lib:${LD_LIBRARY_PATH}"
+
+# Add the minimal Hygon runtime libraries staged by docker/build.sh.
+COPY .hygon-runtime/ /
 
 # Prepare Python build tooling for editable source installs.
 RUN python -m pip install --upgrade \
