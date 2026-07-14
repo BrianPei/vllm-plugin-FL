@@ -1,0 +1,26 @@
+# MetaX C550 CI hardware configuration.
+
+platform: metax
+
+# MetaX vLLM 0.20.0 image with MACA 3.7 and PyTorch 2.8. The setup script
+# replaces the bundled vLLM with the v0.20.2 empty-target build.
+ci_image: cr.metax-tech.com/public-ai-release/maca/vllm-metax:0.20.0-maca.ai3.7.0.107-torch2.8-py312-ubuntu22.04-amd64
+
+# Labels assigned to the repository runner
+# bm-zksg-wx-zone1-d-mc550-64g-2-124.
+runner_labels:
+  - self-hosted
+  - mx-cicd-vllm-plugin
+
+# The runner currently has no /MXC550/share/models directory. Add a /data
+# mount here when model-backed E2E cases are enabled in tests/platforms/metax.yaml.
+container_volumes: []
+
+# MetaX devices are exposed directly; Docker's --gpus option is not used.
+container_options: >-
+  --privileged
+  --shm-size=64g
+  --device /dev/dri:/dev/dri:rwm
+  --device /dev/mxcd:/dev/mxcd:rwm
+  --hostname vllm-plugin-fl-metax
+  --user root

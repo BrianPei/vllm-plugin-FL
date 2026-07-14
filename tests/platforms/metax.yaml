@@ -1,0 +1,42 @@
+# MetaX C550 platform and test configuration.
+
+platform: metax
+vendor: metax
+
+device_types:
+  c550:
+    memory_gb: 64
+    tags: [maca, cuda-alike, bf16]
+
+tolerance:
+  inference:
+    default: {rtol: 1e-3, atol: 1e-3}
+    bfloat16: {rtol: 1e-2, atol: 1e-2}
+
+device_overrides: {}
+unsupported_features: []
+
+# FlagGems supplies the operators for vLLM's empty target on MetaX. Individual
+# jobs can override MACA_VISIBLE_DEVICES when they need a smaller device set.
+env_defaults:
+  GEMS_VENDOR: metax
+  VLLM_PLUGINS: fl
+  MACA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"
+
+c550:
+  name: "c550"
+  tests:
+    e2e:
+      # The metax-124 runner currently has no model directory. Keep E2E empty
+      # until /data/models is provisioned and mounted in .github/configs/metax.yml.
+      inference: {}
+      serving: {}
+    functional:
+      include: "*"
+      # The validated MetaX setup uses eager mode and does not support graph capture.
+      exclude: ["compilation/test_graph_capture.py"]
+    unit:
+      include: "*"
+      exclude: []
+    benchmark:
+      enabled: false

@@ -40,7 +40,7 @@ def from_registry() -> list[str] | None:
     if not REGISTRY_FILE.exists():
         return None
 
-    with open(REGISTRY_FILE) as f:
+    with open(REGISTRY_FILE, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     if not isinstance(data, dict) or "platforms" not in data:

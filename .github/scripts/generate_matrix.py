@@ -49,7 +49,7 @@ def load_platform(platform: str) -> dict:
     if not path.exists():
         print(f"::error::Platform config not found: {path}", file=sys.stderr)
         sys.exit(1)
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 

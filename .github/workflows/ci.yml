@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 18 * * *'  # daily at 2:00 AM CST (UTC+8)
   pull_request:
-    branches: [main, devops]
+    branches: [main, dev, devops]
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -108,4 +108,15 @@ jobs:
     uses: ./.github/workflows/_platform_test.yml
     with:
       platform: hygon
+    secrets: inherit
+
+  # ============================================================
+  # Job 4d: MetaX platform testing
+  # ============================================================
+  test-metax:
+    needs: discover
+    if: contains(fromJson(needs.discover.outputs.platforms), 'metax')
+    uses: ./.github/workflows/_platform_test.yml
+    with:
+      platform: metax
     secrets: inherit

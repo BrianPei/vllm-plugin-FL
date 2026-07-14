@@ -137,6 +137,7 @@ def _cleanup_noop() -> None:
 # Registry: platform name → cleanup function
 _PLATFORM_CLEANUP = {
     "cuda": _cleanup_cuda,
+    "metax": _cleanup_cuda,
     "ascend": _cleanup_ascend,
 }
 
@@ -179,6 +180,7 @@ def _mem_info_noop() -> list[tuple[int, int]]:
 
 _PLATFORM_MEMORY_INFO: dict[str, Callable[[], list[tuple[int, int]]]] = {
     "cuda": _mem_info_cuda,
+    "metax": _mem_info_cuda,
     "ascend": _mem_info_ascend,
 }
 
@@ -213,6 +215,7 @@ def _cache_clear_noop() -> None:
 
 _PLATFORM_CACHE_CLEAR: dict[str, Callable[[], None]] = {
     "cuda": _cache_clear_cuda,
+    "metax": _cache_clear_cuda,
     "ascend": _cache_clear_ascend,
 }
 
