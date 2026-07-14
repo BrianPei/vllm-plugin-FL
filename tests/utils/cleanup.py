@@ -237,10 +237,8 @@ def _cache_clear_ascend() -> None:
 
 def _cache_clear_metax() -> None:
     """Clear MetaX cache through the CUDA-compatible torch API."""
-    try:
+    with contextlib.suppress(AssertionError, RuntimeError, ImportError, AttributeError):
         _cache_clear_cuda()
-    except (AssertionError, RuntimeError, ImportError, AttributeError):
-        pass
 
 
 def _cache_clear_noop() -> None:
