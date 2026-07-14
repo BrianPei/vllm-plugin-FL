@@ -3,12 +3,12 @@
 # Setup script for MetaX C550 CI environment.
 set -euo pipefail
 
-git config --global --add safe.directory "$(pwd)"
-
 export PATH="/opt/conda/bin:${PATH}"
 export GEMS_VENDOR="${GEMS_VENDOR:-metax}"
 export VLLM_PLUGINS="${VLLM_PLUGINS:-fl}"
 export MACA_VISIBLE_DEVICES="${MACA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}"
+VLLM_SOURCE="${VLLM_SOURCE:-/workspace/vllm}"
+FLAGGEMS_SOURCE="${FLAGGEMS_PATH:-/workspace/FlagGems}"
 
 if [[ -n "${GITHUB_ENV:-}" ]]; then
   for name in \
@@ -19,8 +19,6 @@ if [[ -n "${GITHUB_ENV:-}" ]]; then
     echo "${name}=${!name}" >> "${GITHUB_ENV}"
   done
 fi
-
-python -m pip install --upgrade pip
 
 TEST_DEPS=(
   pytest
@@ -35,10 +33,18 @@ TEST_DEPS=(
   sqlalchemy
 )
 
-python -m pip install "${TEST_DEPS[@]}"
-
-VLLM_REF="${VLLM_REF:-v0.20.2}"
-VLLM_SOURCE="${VLLM_SOURCE:-/workspace/vllm}"
+echo "Using local vLLM source: ${VLLM_SOURCE}"
+echo "Using local FlagGems source: ${FLAGGEMS_SOURCE}"
+if [[ ! -f "${VLLM_SOURCE}/pyproject.toml" || ! -d "${VLLM_SOURCE}/vllm" ]]; then
+  echo "Local vLLM source is missing or incomplete: ${VLLM_SOURCE}"
+  exit 1
+fi
+if [[ ! -f "${FLAGGEMS_SOURCE}/pyproject.toml" \
+  || ! -d "${FLAGGEMS_SOURCE}/src/flag_gems" \
+  || ! -f "${FLAGGEMS_SOURCE}/requirements/requirements_metax.txt" ]]; then
+  echo "Local FlagGems source is missing or incomplete: ${FLAGGEMS_SOURCE}"
+  exit 1
+fi
 
 python -m pip uninstall -y vllm || true
 python -m pip cache remove vllm || true
@@ -47,28 +53,28 @@ find "${SITE_PACKAGES}" -maxdepth 1 \
   \( -name "vllm" -o -name "vllm-*.dist-info" -o -name "vllm-*.egg-info" \) \
   -exec rm -rf {} + 2>/dev/null || true
 
-if [[ ! -d "${VLLM_SOURCE}/.git" ]]; then
-  rm -rf "${VLLM_SOURCE}"
-  git clone https://github.com/vllm-project/vllm.git "${VLLM_SOURCE}"
+if command -v uv >/dev/null 2>&1; then
+  uv pip install --system --upgrade pip
+  uv pip install --system "${TEST_DEPS[@]}"
+  VLLM_TARGET_DEVICE=empty uv pip install --system --no-build-isolation -e "${VLLM_SOURCE}" --no-deps
+  uv pip install --system --no-build-isolation --no-deps -e .
+else
+  python -m pip install --upgrade pip
+  python -m pip install "${TEST_DEPS[@]}"
+  VLLM_TARGET_DEVICE=empty python -m pip install -v --no-build-isolation -e "${VLLM_SOURCE}" --no-deps
+  python -m pip install --no-build-isolation --no-deps -e .
 fi
-git config --global --add safe.directory "${VLLM_SOURCE}"
-git -C "${VLLM_SOURCE}" fetch --tags --depth 1 origin "${VLLM_REF}" || true
-git -C "${VLLM_SOURCE}" checkout "${VLLM_REF}"
-VLLM_TARGET_DEVICE=empty python -m pip install -v --no-build-isolation -e "${VLLM_SOURCE}" --no-deps
 
-python -m pip install --no-build-isolation --no-deps -e .
+FLAGGEMS_DIR="$(mktemp -d)/FlagGems"
+cp -a "${FLAGGEMS_SOURCE}" "${FLAGGEMS_DIR}"
 
-FLAGGEMS_REF="${FLAGGEMS_REF:-3123859968915e361e8452dd796dc6b27c956324}"
-FLAGGEMS_SOURCE="${FLAGGEMS_PATH:-/workspace/FlagGems}"
-
-if [[ ! -d "${FLAGGEMS_SOURCE}/.git" ]]; then
-  rm -rf "${FLAGGEMS_SOURCE}"
-  git clone https://github.com/FlagOpen/FlagGems.git "${FLAGGEMS_SOURCE}"
+if command -v uv >/dev/null 2>&1; then
+  uv pip install --system -r "${FLAGGEMS_DIR}/requirements/requirements_metax.txt"
+  GEMS_VENDOR=metax uv pip install --system -e "${FLAGGEMS_DIR}"
+else
+  python -m pip install -r "${FLAGGEMS_DIR}/requirements/requirements_metax.txt"
+  GEMS_VENDOR=metax python -m pip install -v -e "${FLAGGEMS_DIR}"
 fi
-git config --global --add safe.directory "${FLAGGEMS_SOURCE}"
-git -C "${FLAGGEMS_SOURCE}" checkout "${FLAGGEMS_REF}"
-python -m pip install -r "${FLAGGEMS_SOURCE}/requirements/requirements_metax.txt"
-GEMS_VENDOR=metax python -m pip install -v -e "${FLAGGEMS_SOURCE}"
 
 python - <<'PY'
 import flag_gems
