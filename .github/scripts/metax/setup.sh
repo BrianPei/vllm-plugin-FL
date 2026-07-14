@@ -10,6 +10,15 @@ export MACA_VISIBLE_DEVICES="${MACA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}"
 VLLM_SOURCE="${VLLM_SOURCE:-/workspace/vllm}"
 FLAGGEMS_SOURCE="${FLAGGEMS_PATH:-/workspace/FlagGems}"
 
+if ! command -v git >/dev/null 2>&1; then
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git
+fi
+
+git config --global --add safe.directory "$(pwd)"
+git config --global --add safe.directory "${VLLM_SOURCE}"
+git config --global --add safe.directory "${FLAGGEMS_SOURCE}"
+
 if [[ -n "${GITHUB_ENV:-}" ]]; then
   for name in \
     PATH \
@@ -67,6 +76,7 @@ fi
 
 FLAGGEMS_DIR="$(mktemp -d)/FlagGems"
 cp -a "${FLAGGEMS_SOURCE}" "${FLAGGEMS_DIR}"
+git config --global --add safe.directory "${FLAGGEMS_DIR}"
 
 if command -v uv >/dev/null 2>&1; then
   uv pip install --system -r "${FLAGGEMS_DIR}/requirements/requirements_metax.txt"
