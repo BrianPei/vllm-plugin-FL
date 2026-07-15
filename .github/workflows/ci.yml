@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 18 * * *'  # daily at 2:00 AM CST (UTC+8)
   pull_request:
-    branches: [main, dev, devops]
+    branches: [main, devops]
     paths-ignore:
       - "**.md"
       - "docs/**"

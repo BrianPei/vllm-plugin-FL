@@ -20,6 +20,7 @@ hccl = "hccl"
 HCCL = "HCCL"
 cann = "cann"
 CANN = "CANN"
+HSA = "HSA"
 
 [files]
 extend-exclude = [

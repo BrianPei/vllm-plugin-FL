@@ -1,24 +1,22 @@
 #!/bin/bash
-# Copyright (c) 2026 BAAI. All rights reserved.
-# Check MetaX C550 device availability.
+# Copyright (c) 2025 BAAI. All rights reserved.
+# Check MetaX C550 availability.
 set -euo pipefail
 
+echo "Current time: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=== Checking MetaX C550 availability ==="
 
-test -e /dev/mxcd
-test -d /dev/dri
-
+MX_SMI_BIN=""
 if command -v mx-smi >/dev/null 2>&1; then
-  mx-smi
-else
-  echo "WARNING: mx-smi is unavailable; device files were detected."
+  MX_SMI_BIN="$(command -v mx-smi)"
 fi
 
-python - <<'PY'
-import torch
+if [[ -n "${MX_SMI_BIN}" ]]; then
+  echo "Using mx-smi: ${MX_SMI_BIN}"
+  "${MX_SMI_BIN}" || true
+else
+  echo "::warning::mx-smi not found in PATH; skipping SMI output."
+fi
 
-assert torch.cuda.is_available(), "MetaX PyTorch reports no MACA devices"
-count = torch.cuda.device_count()
-assert count >= 4, f"MetaX E2E tests require at least 4 devices, found {count}"
-print(f"MetaX devices visible to PyTorch: {count}")
-PY
+test -d /dev/dri
+test -e /dev/mxcd

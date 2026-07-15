@@ -1,29 +1,28 @@
-# MetaX C550 CI hardware configuration.
+# MetaX Hardware Configuration
+# This file defines CI/CD settings for MetaX C550 testing.
 
 platform: metax
 
-# MetaX vLLM 0.20.0 image with MACA 3.7 and PyTorch 2.8. The setup script
-# replaces the bundled vLLM with the v0.20.2 empty-target build.
+# Docker image for this hardware.
 ci_image: cr.metax-tech.com/public-ai-release/maca/vllm-metax:0.20.0-maca.ai3.7.0.107-torch2.8-py312-ubuntu22.04-amd64
 
-# Labels assigned to the repository runner
-# bm-zksg-wx-zone1-d-mc550-64g-2-124.
+# Runner labels for this hardware.
+# Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
 runner_labels:
-  - self-hosted
   - mx-cicd-vllm-plugin
 
-# Keep model paths consistent with the shared test configurations used by all
-# platforms. Qwen3.6 models live under /workspace and benchmark models under
-# /data/models.
+# Container volumes (hardware-specific paths).
 container_volumes:
-  - /workspace:/workspace
   - /data:/data
+  - /workspace:/workspace
 
-# MetaX devices are exposed directly; Docker's --gpus option is not used.
+# Container options (hardware-specific settings).
 container_options: >-
-  --privileged
+  --hostname vllm-plugin-fl
+  --ipc=host
   --shm-size=64g
   --device /dev/dri:/dev/dri:rwm
   --device /dev/mxcd:/dev/mxcd:rwm
-  --hostname vllm-plugin-fl-metax
-  --user root
+  --env GEMS_VENDOR=metax
+  --env VLLM_PLUGINS=fl
+  --env MACA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7

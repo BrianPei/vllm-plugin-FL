@@ -34,6 +34,8 @@ VENDOR_DEVICE_MAP: dict[str, dict[str, str]] = {
     "iluvatar": {"device_type": "cuda", "device_name": "cuda"},
     # Registered backend: vendor/metax
     "metax": {"device_type": "cuda", "device_name": "metax"},
+    # Hygon DCU uses the CUDA-like torch device interface.
+    "hygon": {"device_type": "cuda", "device_name": "hygon"},
     # Registered backend: vendor/musa
     "mthreads": {"device_type": "musa", "device_name": "musa"},
     # Registered backend: vendor/sunrise
@@ -206,7 +208,14 @@ _load_op_config_from_env()
 class DeviceInfo:
     def __init__(self):
         self.device = DeviceDetector()
-        self.supported_device = ["nvidia", "ascend", "metax", "mthreads", "sunrise"]
+        self.supported_device = [
+            "nvidia",
+            "ascend",
+            "metax",
+            "hygon",
+            "mthreads",
+            "sunrise",
+        ]
         backend.set_torch_backend_device_fn(self.device.vendor_name)
 
     @property

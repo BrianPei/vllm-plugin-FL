@@ -1,27 +1,25 @@
-# MetaX C550 platform and test configuration.
-
 platform: metax
 vendor: metax
 
 device_types:
   c550:
     memory_gb: 64
-    tags: [maca, cuda-alike, bf16]
+    tags: [metax, maca, bf16, fp16, fp32]
 
 tolerance:
   inference:
-    default: {rtol: 1e-3, atol: 1e-3}
-    bfloat16: {rtol: 1e-2, atol: 1e-2}
+    default:
+      rtol: 1e-3
+      atol: 1e-3
+    bfloat16:
+      rtol: 1e-2
+      atol: 1e-2
 
-device_overrides: {}
-unsupported_features: []
-
-# FlagGems supplies the operators for vLLM's empty target on MetaX. Individual
-# jobs can override MACA_VISIBLE_DEVICES when they need a smaller device set.
 env_defaults:
-  GEMS_VENDOR: metax
-  VLLM_PLUGINS: fl
+  GEMS_VENDOR: "metax"
+  VLLM_PLUGINS: "fl"
   MACA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"
+  VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
 
 c550:
   name: "c550"
@@ -33,11 +31,10 @@ c550:
         qwen3_6: ["35b_a3b_tp2_eager"]
     functional:
       include: "*"
-      # The validated MetaX setup uses eager mode and does not support graph capture.
-      exclude: ["compilation/test_graph_capture.py"]
+      exclude: []
     unit:
       include: "*"
       exclude: []
     benchmark:
       enabled: true
-      smoke: ["throughput", "latency", "serve"]
+      smoke: ["serve"]

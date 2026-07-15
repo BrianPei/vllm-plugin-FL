@@ -14,9 +14,8 @@ from vllm.v1.attention.backend import (
     AttentionImpl,
     AttentionType,
     MultipleOf,
-    get_kv_quant_mode,
+    is_quantized_kv_cache,
 )
-from vllm.v1.kv_cache_interface import KVQuantMode
 from vllm.model_executor.layers.attention.attention import Attention
 from vllm.v1.attention.ops.common import cp_lse_ag_out_rs
 
@@ -650,7 +649,7 @@ class FlashAttentionImpl(AttentionImpl):
         # Cache the batch invariant result for use in forward passes
         self.batch_invariant_enabled = _bi_mode
 
-        if get_kv_quant_mode(self.kv_cache_dtype) != KVQuantMode.NONE and not flash_attn_supports_fp8():
+        if is_quantized_kv_cache(self.kv_cache_dtype) and not flash_attn_supports_fp8():
             raise NotImplementedError(
                 "FlashAttention does not support fp8 kv-cache on this device."
             )
