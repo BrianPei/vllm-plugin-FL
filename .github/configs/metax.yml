@@ -4,7 +4,7 @@
 platform: metax
 
 # Docker image for this hardware.
-ci_image: cr.metax-tech.com/public-ai-release/maca/vllm-metax:0.20.0-maca.ai3.7.0.107-torch2.8-py312-ubuntu22.04-amd64
+ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:vllm-metax-0.20.0-maca.ai3.7.0.107-torch2.8-py312-ubuntu22.04-amd64
 
 # Runner labels for this hardware.
 # Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
