@@ -4,7 +4,7 @@
 platform: metax
 
 # Docker image for this hardware.
-ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:aa3846c-metax-dev
+ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:44518f3-metax-dev
 
 # Runner labels for this hardware.
 # Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
