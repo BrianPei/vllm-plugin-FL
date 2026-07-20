@@ -66,13 +66,18 @@ RUN python -m pip uninstall -y vllm || true; \
 
 # FlagGems is pinned to the source revision already validated on MetaX C550.
 RUN rm -rf /tmp/FlagGems \
-    && git clone https://github.com/FlagOpen/FlagGems.git /tmp/FlagGems \
-    && git -C /tmp/FlagGems checkout "${FLAGGEMS_REF}" \
+    && rm -f /tmp/FlagGems.tar.gz \
+    && mkdir -p /tmp/FlagGems \
+    && curl --fail --location --retry 5 --retry-all-errors \
+        --retry-delay 5 --connect-timeout 30 --max-time 1200 \
+        "https://codeload.github.com/FlagOpen/FlagGems/tar.gz/${FLAGGEMS_REF}" \
+        --output /tmp/FlagGems.tar.gz \
+    && tar -xzf /tmp/FlagGems.tar.gz --strip-components=1 -C /tmp/FlagGems \
     && python -m pip install --no-cache-dir \
         -r /tmp/FlagGems/requirements/requirements_metax.txt \
     && GEMS_VENDOR=metax python -m pip install --no-cache-dir \
         --no-build-isolation /tmp/FlagGems \
-    && rm -rf /tmp/FlagGems \
+    && rm -rf /tmp/FlagGems /tmp/FlagGems.tar.gz \
     && python -m pip install --no-cache-dir \
         numpy==1.26.4 \
         opencv-python-headless==4.11.0.86 \
