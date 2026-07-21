@@ -4,6 +4,7 @@
 """Attention layer with FlashAttention."""
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import ClassVar
 
 import numpy as np
@@ -14,7 +15,6 @@ from vllm.v1.attention.backend import (
     AttentionImpl,
     AttentionType,
     MultipleOf,
-    is_quantized_kv_cache,
 )
 from vllm.model_executor.layers.attention.attention import Attention
 from vllm.v1.attention.ops.common import cp_lse_ag_out_rs
@@ -64,7 +64,22 @@ from vllm.v1.kv_cache_interface import AttentionSpec
 # --------------------------------------------------------------
 # Note: used for prefill decode split with mtp on maca
 # --------------------------------------------------------------
-from .mla.common import QueryLenSupport
+
+
+class QueryLenSupport(Enum):
+    SINGLE_ONLY = "single_only"
+    UNIFORM = "uniform"
+    VARLEN = "varlen"
+
+
+def is_quantized_kv_cache(kv_cache_dtype: str) -> bool:
+    """Compatibility helper for vLLM 0.20.2."""
+    return (
+        kv_cache_dtype.startswith("fp8")
+        or kv_cache_dtype.endswith("per_token_head")
+        or kv_cache_dtype == "nvfp4"
+    )
+
 
 logger = init_logger(__name__)
 
