@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # 2026 - Modified by MetaX Integrated Circuits (Shanghai) Co., Ltd. All Rights Reserved.
 import torch
-from vllm.model_executor.layers.activation import (
-    SiluAndMul,
-    GeluAndMul,
-)
+import torch.nn.functional as F
 
 
 def silu_and_mul_maca(obj, x: torch.Tensor) -> torch.Tensor:
@@ -20,8 +17,8 @@ def silu_and_mul_maca(obj, x: torch.Tensor) -> torch.Tensor:
     Returns:
         Output tensor of shape [..., d]
     """
-    act_fn = SiluAndMul()
-    return act_fn.forward_cuda(x)
+    d = x.shape[-1] // 2
+    return F.silu(x[..., :d]) * x[..., d:]
 
 
 def gelu_and_mul_maca(obj, x: torch.Tensor) -> torch.Tensor:
@@ -37,5 +34,5 @@ def gelu_and_mul_maca(obj, x: torch.Tensor) -> torch.Tensor:
     Returns:
         Output tensor of shape [..., d]
     """
-    act_fn = GeluAndMul()
-    return act_fn.forward_cuda(x)
+    d = x.shape[-1] // 2
+    return F.gelu(x[..., :d], approximate="none") * x[..., d:]
