@@ -52,9 +52,10 @@ RUN python -m pip uninstall -y vllm || true \
     && find "${SITE_PACKAGES}" -maxdepth 1 \
         \( -name "vllm" -o -name "vllm-*.dist-info" -o -name "vllm-*.egg-info" \) \
         -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /workspace/vllm \
-    && git clone https://github.com/vllm-project/vllm.git /workspace/vllm \
-    && cd /workspace/vllm \
+    && rm -rf /opt/vllm-src/vllm \
+    && mkdir -p /opt/vllm-src \
+    && git clone https://github.com/vllm-project/vllm.git /opt/vllm-src/vllm \
+    && cd /opt/vllm-src/vllm \
     && git checkout "v${VLLM_VERSION}" \
     && VLLM_TARGET_DEVICE=empty python -m pip install -v --no-build-isolation -e . --no-deps
 
@@ -89,16 +90,18 @@ RUN python -m pip install \
         cmake
 
 # Install FlagGems from the pinned source commit.
-RUN rm -rf /workspace/FlagGems \
-    && git clone https://github.com/flagos-ai/FlagGems /workspace/FlagGems \
-    && cd /workspace/FlagGems \
+RUN rm -rf /opt/vllm-src/FlagGems \
+    && mkdir -p /opt/vllm-src \
+    && git clone https://github.com/flagos-ai/FlagGems /opt/vllm-src/FlagGems \
+    && cd /opt/vllm-src/FlagGems \
     && git checkout "${FLAGGEMS_VERSION}" \
     && python -m pip install --no-build-isolation -e .
 
 # Install vllm-plugin-FL from the pinned source commit.
-RUN rm -rf /workspace/vllm-plugin-FL \
-    && git clone https://github.com/flagos-ai/vllm-plugin-FL /workspace/vllm-plugin-FL \
-    && cd /workspace/vllm-plugin-FL \
+RUN rm -rf /opt/vllm-src/vllm-plugin-FL \
+    && mkdir -p /opt/vllm-src \
+    && git clone https://github.com/flagos-ai/vllm-plugin-FL /opt/vllm-src/vllm-plugin-FL \
+    && cd /opt/vllm-src/vllm-plugin-FL \
     && git checkout "${VLLM_PLUGIN_FL_VERSION}" \
     && CMAKE_ARGS="-DCMAKE_PREFIX_PATH=/opt/dtk;/opt/dtk/hip;/opt/dtk/hsa;/opt/hyhal;/usr/local/hyhal ${CMAKE_ARGS:-}" \
         VLLM_VENDOR=cuda python -m pip install --no-build-isolation -e .
