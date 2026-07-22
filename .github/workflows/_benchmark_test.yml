@@ -86,6 +86,7 @@ jobs:
         run: apt-get update && apt-get install -y jq
 
       - name: Upload benchmark data to backend
+        continue-on-error: true
         if: always() && steps.benchmark_test.outcome == 'success'
         uses: flagos-ai/FlagOps/actions/post-benchmark-report@main
         env:
