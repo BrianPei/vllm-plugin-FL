@@ -4,7 +4,6 @@
 """Attention layer with FlashAttention."""
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import ClassVar
 
 import numpy as np
@@ -15,7 +14,9 @@ from vllm.v1.attention.backend import (
     AttentionImpl,
     AttentionType,
     MultipleOf,
+    get_kv_quant_mode,
 )
+from vllm.v1.kv_cache_interface import KVQuantMode
 from vllm.model_executor.layers.attention.attention import Attention
 from vllm.v1.attention.ops.common import cp_lse_ag_out_rs
 
@@ -64,22 +65,7 @@ from vllm.v1.kv_cache_interface import AttentionSpec
 # --------------------------------------------------------------
 # Note: used for prefill decode split with mtp on maca
 # --------------------------------------------------------------
-
-
-class QueryLenSupport(Enum):
-    SINGLE_ONLY = "single_only"
-    UNIFORM = "uniform"
-    VARLEN = "varlen"
-
-
-def is_quantized_kv_cache(kv_cache_dtype: str) -> bool:
-    """Compatibility helper for vLLM 0.20.2."""
-    return (
-        kv_cache_dtype.startswith("fp8")
-        or kv_cache_dtype.endswith("per_token_head")
-        or kv_cache_dtype == "nvfp4"
-    )
-
+from .mla.common import QueryLenSupport
 
 logger = init_logger(__name__)
 
@@ -664,7 +650,7 @@ class FlashAttentionImpl(AttentionImpl):
         # Cache the batch invariant result for use in forward passes
         self.batch_invariant_enabled = _bi_mode
 
-        if is_quantized_kv_cache(self.kv_cache_dtype) and not flash_attn_supports_fp8():
+        if get_kv_quant_mode(self.kv_cache_dtype) != KVQuantMode.NONE and not flash_attn_supports_fp8():
             raise NotImplementedError(
                 "FlashAttention does not support fp8 kv-cache on this device."
             )
