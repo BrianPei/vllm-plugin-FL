@@ -14,7 +14,7 @@ export HIP_CLANG_PATH="${HIP_CLANG_PATH:-${DTK_HOME}/llvm/bin}"
 export DEVICE_LIB_PATH="${DEVICE_LIB_PATH:-${DTK_HOME}/amdgcn/bitcode}"
 
 DTK_PATH="${DTK_HOME}/bin:${HIP_PATH}/bin:${HIP_CLANG_PATH}"
-DTK_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:${HIP_PATH}/lib:${DTK_HOME}/lib:${DTK_HOME}/llvm/lib:${DTK_HOME}/dcc/lib:${DTK_HOME}/aillvm/lib:${HSA_PATH}/lib"
+DTK_LIBRARY_PATH="/opt/hyhal/lib/criu:/opt/hyhal/lib/rocprofiler:/opt/hyhal/lib:/usr/local/hyhal/lib:${HIP_PATH}/lib:${DTK_HOME}/lib:${DTK_HOME}/llvm/lib:${DTK_HOME}/dcc/lib:${DTK_HOME}/aillvm/lib:${HSA_PATH}/lib"
 export PATH="${DTK_PATH}:${PATH}"
 export LD_LIBRARY_PATH="${DTK_LIBRARY_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
