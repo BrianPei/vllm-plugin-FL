@@ -45,6 +45,11 @@ def _register_flagcx_connector():
 
 def register():
     """Register the FL platform."""
+    if os.environ.get("GEMS_VENDOR", "").lower() == "metax":
+        import torch
+        if not hasattr(torch.accelerator, "empty_cache"):
+            torch.accelerator.empty_cache = torch.cuda.empty_cache
+
     _patch_transformers_compat()
 
     # Model-specific platform patches
