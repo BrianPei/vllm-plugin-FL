@@ -3,11 +3,23 @@
 # Setup script for MetaX C550 CI environment.
 set -euo pipefail
 
+export PATH="/opt/conda/bin:${PATH}"
+
 : "${GEMS_VENDOR:?GEMS_VENDOR is not set}"
 : "${VLLM_PLUGINS:?VLLM_PLUGINS is not set}"
 : "${MACA_VISIBLE_DEVICES:?MACA_VISIBLE_DEVICES is not set}"
 
 git config --global --add safe.directory "$(pwd)"
+
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  for name in \
+    PATH \
+    GEMS_VENDOR \
+    VLLM_PLUGINS \
+    MACA_VISIBLE_DEVICES; do
+    echo "${name}=${!name}" >> "${GITHUB_ENV}"
+  done
+fi
 
 # vLLM, FlagGems, and test dependencies are provided by the CI image.
 # Only install the checked-out plugin source for this workflow run.
