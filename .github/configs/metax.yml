@@ -23,7 +23,8 @@ ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:44518f3-metax-dev
 # Runner labels for this hardware.
 # Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
 runner_labels:
-  - mx-cicd-vllm-plugin
+  - self-hosted
+  - metax-c550-124
 
 # Container volumes (hardware-specific paths).
 container_volumes:
