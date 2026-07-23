@@ -16,6 +16,7 @@ class TestFindVendorBackendDir:
         assert _find_vendor_backend_dir("nvidia", available) == "cuda"
         assert _find_vendor_backend_dir("ascend", available) == "ascend"
         assert _find_vendor_backend_dir("metax", available) == "metax"
+        assert _find_vendor_backend_dir("hygon", available) == "cuda"
         assert _find_vendor_backend_dir("iluvatar", available) == "iluvatar"
 
     def test_maca_alias_resolves_to_metax(self):

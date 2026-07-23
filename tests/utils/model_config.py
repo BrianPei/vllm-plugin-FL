@@ -280,6 +280,7 @@ class ModelConfig:
 
             tensor_parallel_size=8 → ["--tensor-parallel-size", "8"]
             enforce_eager=True     → ["--enforce-eager"]
+            enable_log_requests=False → ["--no-enable-log-requests"]
 
         The ``tensor_parallel_size`` key is excluded because
         ``VllmServer`` handles it via the ``tp_size`` parameter.
@@ -298,6 +299,8 @@ class ModelConfig:
             if isinstance(value, bool):
                 if value:
                     args.append(flag)
+                elif key.startswith("enable_"):
+                    args.append("--no-" + key.replace("_", "-"))
             else:
                 args.extend([flag, str(value)])
 

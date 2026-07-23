@@ -12,19 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Platform registry — controls which platforms are tested in CI.
-#
-# Each key under `platforms` must match a config file name in this directory
-# (e.g., "cuda" -> cuda.yml, "ascend" -> ascend.yml).
-#
-# Set `enabled: false` to skip a platform without removing its config file.
+# SPDX-License-Identifier: Apache-2.0
+# 2026 - Modified by MetaX Integrated Circuits (Shanghai) Co., Ltd. All Rights Reserved.
 
-platforms:
-  cuda:
-    enabled: true
-  ascend:
-    enabled: false
-  hygon:
-    enabled: true
-  metax:
-    enabled: true
+# -----------------------------------------------------
+# Note: torch 2.8+metax does not have torch.accelerator.empty_cache
+#       (added in PyTorch 2.10). Patch it to use torch.cuda.empty_cache.
+# _____________________________________________________
+
+import torch
+
+
+if not hasattr(torch.accelerator, "empty_cache"):
+    torch.accelerator.empty_cache = torch.cuda.empty_cache

@@ -92,6 +92,7 @@ jobs:
             --cases '${{ inputs.cases }}'
 
       - name: Upload test results
+        continue-on-error: true
         if: always()
         uses: actions/upload-artifact@v4
         with:

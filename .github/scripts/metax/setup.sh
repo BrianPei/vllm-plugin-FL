@@ -1,25 +1,16 @@
 #!/bin/bash
 # Copyright (c) 2025 BAAI. All rights reserved.
-# Setup script for Hygon DCU CI environment.
+# Setup script for MetaX C550 CI environment.
 set -euo pipefail
-
-git config --global --add safe.directory "$(pwd)"
 
 : "${GEMS_VENDOR:?GEMS_VENDOR is not set}"
 : "${VLLM_PLUGINS:?VLLM_PLUGINS is not set}"
-: "${DTK_HOME:?DTK_HOME is not set}"
-: "${ROCM_PATH:?ROCM_PATH is not set}"
-: "${HIP_PATH:?HIP_PATH is not set}"
-: "${HSA_PATH:?HSA_PATH is not set}"
-: "${HIP_CLANG_PATH:?HIP_CLANG_PATH is not set}"
-: "${DEVICE_LIB_PATH:?DEVICE_LIB_PATH is not set}"
-: "${LD_LIBRARY_PATH:?LD_LIBRARY_PATH is not set}"
+: "${MACA_VISIBLE_DEVICES:?MACA_VISIBLE_DEVICES is not set}"
 
-echo "DTK_HOME=${DTK_HOME}"
-echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
-test -e "${HIP_PATH}/lib/libgalaxyhip.so.5"
-test -e "${DTK_HOME}/llvm/lib/libomp.so"
+git config --global --add safe.directory "$(pwd)"
 
+# vLLM, FlagGems, and test dependencies are provided by the CI image.
+# Only install the checked-out plugin source for this workflow run.
 python -m pip install --no-build-isolation --no-deps -e .
 
 python - <<'PY'

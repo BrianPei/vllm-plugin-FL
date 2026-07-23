@@ -130,6 +130,11 @@ class PlatformFL(Platform):
         super().import_kernels()
 
         if cls.vendor_name == "metax":
+            # MetaX Triton cannot compile vLLM 0.20.2 top-k/top-p sampler.
+            # Use the official PyTorch fallback for correctness.
+            from vllm.v1.sample.ops import topk_topp_sampler
+            topk_topp_sampler.HAS_TRITON = False
+
             try:
                 import mcoplib._C  # noqa: F401
             except ImportError:

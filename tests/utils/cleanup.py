@@ -129,6 +129,24 @@ def _cleanup_ascend() -> None:
         pass
 
 
+def _cleanup_metax() -> None:
+    """Log MetaX device state."""
+    try:
+        result = subprocess.run(
+            ["mx-smi"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            print("[cleanup] MetaX device state:")
+            for line in result.stdout.strip().split("\n")[:40]:
+                print(f"  {line.strip()}")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        # mx-smi not available or timed out — skip memory logging
+        pass
+
+
 def _cleanup_noop() -> None:
     """No-op cleanup for unknown platforms."""
     pass
@@ -138,6 +156,7 @@ def _cleanup_noop() -> None:
 _PLATFORM_CLEANUP = {
     "cuda": _cleanup_cuda,
     "ascend": _cleanup_ascend,
+    "metax": _cleanup_metax,
 }
 
 
@@ -173,6 +192,14 @@ def _mem_info_ascend() -> list[tuple[int, int]]:
         return []
 
 
+def _mem_info_metax() -> list[tuple[int, int]]:
+    """Return [(free_bytes, total_bytes), ...] for each MetaX device."""
+    try:
+        return _mem_info_cuda()
+    except (AssertionError, RuntimeError, ImportError, AttributeError):
+        return []
+
+
 def _mem_info_noop() -> list[tuple[int, int]]:
     return []
 
@@ -180,6 +207,7 @@ def _mem_info_noop() -> list[tuple[int, int]]:
 _PLATFORM_MEMORY_INFO: dict[str, Callable[[], list[tuple[int, int]]]] = {
     "cuda": _mem_info_cuda,
     "ascend": _mem_info_ascend,
+    "metax": _mem_info_metax,
 }
 
 
@@ -207,6 +235,12 @@ def _cache_clear_ascend() -> None:
         pass
 
 
+def _cache_clear_metax() -> None:
+    """Clear MetaX cache through the CUDA-compatible torch API."""
+    with contextlib.suppress(AssertionError, RuntimeError, ImportError, AttributeError):
+        _cache_clear_cuda()
+
+
 def _cache_clear_noop() -> None:
     pass
 
@@ -214,6 +248,7 @@ def _cache_clear_noop() -> None:
 _PLATFORM_CACHE_CLEAR: dict[str, Callable[[], None]] = {
     "cuda": _cache_clear_cuda,
     "ascend": _cache_clear_ascend,
+    "metax": _cache_clear_metax,
 }
 
 
