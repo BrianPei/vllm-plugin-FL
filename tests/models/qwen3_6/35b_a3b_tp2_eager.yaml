@@ -7,8 +7,6 @@ llm:
   max_model_len: 262144
   gpu_memory_utilization: 0.90
   enforce_eager: true
-  enable_log_requests: false
-  enable_prefix_caching: false
   trust_remote_code: false
   disable_custom_all_reduce: true
 
@@ -21,6 +19,11 @@ generate:
 
 serve:
   served_model_name: "qwen"
+  extra_engine:
+    enforce_eager: false
+    disable_custom_all_reduce: false
+    enable_log_requests: false
+    enable_prefix_caching: false
   startup_retries: 120
   endpoints: ["chat"]
   stream: false
