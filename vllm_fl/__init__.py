@@ -2,6 +2,20 @@
 
 import os
 import logging
+import sys
+
+# torch.float4_e2m1fn_x2 exists only in CUDA builds of PyTorch 2.7+.
+# vllm.ir.tolerances references it at module level, so we inject a sentinel
+# before any vllm.ir import can happen.
+if "torch" in sys.modules:
+    _torch = sys.modules["torch"]
+    if not hasattr(_torch, "float4_e2m1fn_x2"):
+        _torch.float4_e2m1fn_x2 = _torch.uint8
+else:
+    import torch as _torch
+    if not hasattr(_torch, "float4_e2m1fn_x2"):
+        _torch.float4_e2m1fn_x2 = _torch.uint8
+del _torch
 
 from vllm_fl.utils import get_op_config as _get_op_config
 
