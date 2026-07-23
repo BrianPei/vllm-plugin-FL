@@ -201,6 +201,17 @@ class PlatformFL(Platform):
             compilation_config.compile_sizes = []
 
         if (
+            cls.device_type == "musa"
+            and compilation_config.cudagraph_mode.has_full_cudagraphs()
+        ):
+            logger.info(
+                "MUSA: Downgrading cudagraph_mode from %s to PIECEWISE because "
+                "FULL cudagraphs are not supported by torch_musa.",
+                compilation_config.cudagraph_mode,
+            )
+            compilation_config.cudagraph_mode = CUDAGraphMode.PIECEWISE
+
+        if (
             parallel_config.data_parallel_size > 1
             and compilation_config.cudagraph_mode != CUDAGraphMode.NONE
         ):
@@ -314,7 +325,7 @@ class PlatformFL(Platform):
 
     @classmethod
     def support_static_graph_mode(cls) -> bool:
-        if cls.vendor_name in ["nvidia", "ascend", "metax"]:
+        if cls.vendor_name in ["nvidia", "ascend", "metax", "mthreads"]:
             return True
         return False
 

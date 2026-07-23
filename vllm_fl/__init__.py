@@ -77,10 +77,18 @@ def register():
     return "vllm_fl.platform.PlatformFL"
 
 def register_quant_linear():
+    from vllm.platforms import current_platform
+    # The quant kernel import requires CUDA torch.ops._C, unavailable on MUSA.
+    if current_platform.device_type == "musa":
+        return
     from vllm_fl.quantization.quant_linear import add_oot_quant_kernel
     add_oot_quant_kernel()
 
 def register_router():
+    from vllm.platforms import current_platform
+    # The fused MoE import chain requires CUDA torch.ops._C on MUSA.
+    if current_platform.device_type == "musa":
+        return
     from vllm_fl.ops.fused_moe.router import replace_router_with_fl
     replace_router_with_fl()
 
