@@ -43,7 +43,7 @@ COPY .hygon-runtime/ /
 RUN python -m pip install --upgrade \
         ${INDEX_URL:+--index-url ${INDEX_URL}} \
         ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
-        pip setuptools wheel setuptools-scm
+        pip "setuptools<81" wheel setuptools-scm
 
 # Replace the base image's vLLM with official vLLM built in empty mode.
 RUN python -m pip uninstall -y vllm || true \
@@ -95,7 +95,10 @@ RUN rm -rf /opt/vllm-src/FlagGems \
     && git clone https://github.com/flagos-ai/FlagGems /opt/vllm-src/FlagGems \
     && cd /opt/vllm-src/FlagGems \
     && git checkout "${FLAGGEMS_VERSION}" \
-    && python -m pip install --no-build-isolation -e .
+    && python -m pip install \
+        ${INDEX_URL:+--index-url ${INDEX_URL}} \
+        ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
+        --no-build-isolation -e .
 
 # Install vllm-plugin-FL from the pinned source commit.
 RUN rm -rf /opt/vllm-src/vllm-plugin-FL \
@@ -104,7 +107,10 @@ RUN rm -rf /opt/vllm-src/vllm-plugin-FL \
     && cd /opt/vllm-src/vllm-plugin-FL \
     && git checkout "${VLLM_PLUGIN_FL_VERSION}" \
     && CMAKE_ARGS="-DCMAKE_PREFIX_PATH=/opt/dtk;/opt/dtk/hip;/opt/dtk/hsa;/opt/hyhal;/usr/local/hyhal ${CMAKE_ARGS:-}" \
-        VLLM_VENDOR=cuda python -m pip install --no-build-isolation -e .
+        VLLM_VENDOR=cuda python -m pip install \
+        ${INDEX_URL:+--index-url ${INDEX_URL}} \
+        ${EXTRA_INDEX_URL:+--extra-index-url ${EXTRA_INDEX_URL}} \
+        --no-build-isolation -e .
 
 WORKDIR /workspace
 
