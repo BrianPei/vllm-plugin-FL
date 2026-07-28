@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # MetaX Hardware Configuration
-# This file defines CI/CD settings for MetaX C550 testing.
+# This file defines CI/CD settings for MetaX C550 testing
 
 platform: metax
 
@@ -21,14 +21,13 @@ platform: metax
 ci_image: harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:44518f3-metax-dev
 
 # Runner labels for this hardware.
-# Keep this aligned with the self-hosted runner label on the MetaX C550 machine.
+# Keep this aligned with the MetaX C550 runner label.
 runner_labels:
-  - mx-cicd-vllm-plugin
+  - metax-c550-124
 
 # Container volumes (hardware-specific paths).
 container_volumes:
   - /data:/data
-  - /workspace:/workspace
 
 # Container options (hardware-specific settings).
 container_options: >-

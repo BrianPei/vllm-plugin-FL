@@ -26,18 +26,19 @@ In theory, vllm-plugin-FL can support all models available in vLLM, as long as n
 | NVIDIA | Supported | - |
 | Ascend | Supported | - |
 | MetaX | Supported | - |
-| Pingtouge-Zhenwu | Supported | - |
+| T-Head | Supported | - |
 | Iluvatar | Supported | - |
-| Tsingmicro | Merging | [PR #52](https://github.com/flagos-ai/vllm-plugin-FL/pull/52) |
+| Tsingmicro | Supported | - |
 | Moore Threads | Supported | - |
-| Hygon | Merging | [PR #78](https://github.com/flagos-ai/vllm-plugin-FL/pull/78) |
+| Hygon | Supported | - |
 | Sunrise | Supported | - |
+| Enflame | Supported | - |
 
 ## Quick Start
 
 ### Setup
 
-1. Install vllm from the official [v0.20.2](https://github.com/vllm-project/vllm/tree/v0.20.2) (optional if the correct version is installed) or from the fork [vllm-FL](https://github.com/flagos-ai/vllm-FL).
+1. Install vllm from the official [v0.20.2](https://github.com/vllm-project/vllm/tree/v0.20.2) (optional if the correct version is installed)
 
 
 2. Install vllm-plugin-FL
@@ -56,6 +57,23 @@ In theory, vllm-plugin-FL can support all models available in vLLM, as long as n
     pip install --no-build-isolation -e .
     ```
 
+    For CUDA-like devices, including CUDA and HIP/ROCm environments that use
+    PyTorch's CUDA dispatch key, build the plugin native extension by setting
+    `VLLM_VENDOR=cuda` during installation:
+    ```sh
+    cd vllm-plugin-FL
+    VLLM_VENDOR=cuda pip install --no-build-isolation .
+    # or editable install
+    VLLM_VENDOR=cuda pip install --no-build-isolation -e .
+    ```
+
+    This builds and installs `vllm_fl._C`, which provides native C++ support
+    required by some graph/custom-op paths, especially when vLLM is installed
+    with `VLLM_TARGET_DEVICE=empty`.
+
+    If `VLLM_VENDOR` is not set, vllm-plugin-FL is installed as a Python-only
+    plugin and the native extension is skipped.
+
 3. Install [FlagGems](https://flagos-ai.github.io/FlagGems/getting-started/install/)
 
     3.1 Install Build Dependencies
@@ -69,12 +87,11 @@ In theory, vllm-plugin-FL can support all models available in vLLM, as long as n
     ```sh
     git clone https://github.com/flagos-ai/FlagGems
     cd FlagGems
-    git checkout v5.0.0
+    git checkout 3b2b55c8eda5de44ba3476d26566ecf134db0662
     pip install --no-build-isolation .
     # or editble install
     pip install --no-build-isolation -e .
     ```
-    Note: if on Sunrize platform, depends on FlagGems [PR #2949](https://github.com/flagos-ai/FlagGems/pull/2949)
 
 4. (Optional) Install [FlagCX](https://github.com/flagos-ai/FlagCX/blob/main/docs/getting_started.md#build-and-installation)
 

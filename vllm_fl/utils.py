@@ -45,6 +45,14 @@ VENDOR_DEVICE_MAP: dict[str, dict[str, str]] = {
     "mthreads": {"device_type": "musa", "device_name": "musa"},
     # Registered backend: vendor/sunrise
     "sunrise": {"device_type": "ptpu", "device_name": "ptpu"},
+    # Registered backend: vendor/hygon
+    "hygon": {"device_type": "cuda", "device_name": "cuda"},
+    # Registered backend: vendor/thead (PPU)
+    "thead": {"device_type": "cuda", "device_name": "thead"},
+    # Registered backend: vendor/gcu (Enflame GCU / torch_gcu)
+    "enflame": {"device_type": "gcu", "device_name": "gcu"},
+    # Registered backend: vendor/txda
+    "tsingmicro": {"device_type": "txda", "device_name": "txda"},
 }
 
 
@@ -220,6 +228,8 @@ class DeviceInfo:
             "hygon",
             "mthreads",
             "sunrise",
+            "thead",
+            "gcu",
         ]
         backend.set_torch_backend_device_fn(self.device.vendor_name)
 

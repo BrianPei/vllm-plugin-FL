@@ -1,12 +1,13 @@
 # Copyright (c) 2025 BAAI. All rights reserved.
 
-from vllm.model_executor.kernels.linear import (
-    _POSSIBLE_INT8_KERNELS,
-    _POSSIBLE_FP8_KERNELS,
-    _POSSIBLE_KERNELS,
-    _POSSIBLE_FP8_BLOCK_KERNELS,
-)
+import os
 from vllm.platforms import PlatformEnum, current_platform
+from vllm_fl.utils import use_flaggems_op
+
+from .fp8 import FlagGemsFp8BlockScaledMMLinearKernel
+
+
+FLAGGEMS_FP8_BLOCK_GEMM_OP = "flaggems_fp8_block_gemm"
 
 
 def _resolve_source_platform() -> PlatformEnum:
@@ -37,6 +38,12 @@ def add_oot_quant_kernel() -> None:
     (CUDA / ROCM / CPU) into PlatformEnum.OOT. Each kernel's own
     is_supported() / can_implement() will filter at runtime.
     """
+    from vllm.model_executor.kernels.linear import (
+        _POSSIBLE_INT8_KERNELS,
+        _POSSIBLE_FP8_KERNELS,
+        _POSSIBLE_KERNELS,
+        _POSSIBLE_FP8_BLOCK_KERNELS,
+    )
     source = _resolve_source_platform()
 
     if PlatformEnum.OOT not in _POSSIBLE_KERNELS:
@@ -57,4 +64,14 @@ def add_oot_quant_kernel() -> None:
     if PlatformEnum.OOT not in _POSSIBLE_FP8_BLOCK_KERNELS:
         _POSSIBLE_FP8_BLOCK_KERNELS[PlatformEnum.OOT] = list(
             _POSSIBLE_FP8_BLOCK_KERNELS.get(source, [])
+        )
+
+    if (
+        current_platform.supports_fp8()
+        and use_flaggems_op(FLAGGEMS_FP8_BLOCK_GEMM_OP)
+        and FlagGemsFp8BlockScaledMMLinearKernel
+        not in _POSSIBLE_FP8_BLOCK_KERNELS[PlatformEnum.OOT]
+    ):
+        _POSSIBLE_FP8_BLOCK_KERNELS[PlatformEnum.OOT].insert(
+            0, FlagGemsFp8BlockScaledMMLinearKernel
         )

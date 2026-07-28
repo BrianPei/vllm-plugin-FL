@@ -15,14 +15,17 @@ git config --global --add safe.directory "$(pwd)"
 : "${DEVICE_LIB_PATH:?DEVICE_LIB_PATH is not set}"
 : "${LD_LIBRARY_PATH:?LD_LIBRARY_PATH is not set}"
 
-IMAGE_PLUGIN_ROOT="${VLLM_FL_IMAGE_PLUGIN_ROOT:-/opt/vllm-src/vllm-plugin-FL}"
-test -d "${IMAGE_PLUGIN_ROOT}/vllm_fl"
+USE_IMAGE_PLUGIN="${HYGON_USE_IMAGE_PLUGIN:-1}"
 
-# The Hygon CI image already contains the validated plugin commit. Keep the
-# checkout available for tests and configs, but load vllm_fl from the image.
-HYGON_SITE_DIR="${RUNNER_TEMP:-/tmp}/hygon-python-site"
-mkdir -p "${HYGON_SITE_DIR}"
-cat > "${HYGON_SITE_DIR}/sitecustomize.py" <<'PY'
+if [[ "${USE_IMAGE_PLUGIN}" == "1" ]]; then
+    IMAGE_PLUGIN_ROOT="${VLLM_FL_IMAGE_PLUGIN_ROOT:-/opt/vllm-src/vllm-plugin-FL}"
+    test -d "${IMAGE_PLUGIN_ROOT}/vllm_fl"
+
+    # The Hygon CI image already contains the validated plugin commit. Keep the
+    # checkout available for tests and configs, but load vllm_fl from the image.
+    HYGON_SITE_DIR="${RUNNER_TEMP:-/tmp}/hygon-python-site"
+    mkdir -p "${HYGON_SITE_DIR}"
+    cat > "${HYGON_SITE_DIR}/sitecustomize.py" <<'PY'
 import importlib.abc
 import importlib.util
 import os
@@ -52,20 +55,28 @@ if _root:
     sys.meta_path.insert(0, _ImageVllmFLFinder(_root))
 PY
 
-export VLLM_FL_IMAGE_PLUGIN_ROOT="${IMAGE_PLUGIN_ROOT}"
-export PYTHONPATH="${HYGON_SITE_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
+    export VLLM_FL_IMAGE_PLUGIN_ROOT="${IMAGE_PLUGIN_ROOT}"
+    export PYTHONPATH="${HYGON_SITE_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 
-if [[ -n "${GITHUB_ENV:-}" ]]; then
-    {
-        echo "VLLM_FL_IMAGE_PLUGIN_ROOT=${VLLM_FL_IMAGE_PLUGIN_ROOT}"
-        echo "PYTHONPATH=${PYTHONPATH}"
-    } >> "${GITHUB_ENV}"
+    if [[ -n "${GITHUB_ENV:-}" ]]; then
+        {
+            echo "VLLM_FL_IMAGE_PLUGIN_ROOT=${VLLM_FL_IMAGE_PLUGIN_ROOT}"
+            echo "PYTHONPATH=${PYTHONPATH}"
+        } >> "${GITHUB_ENV}"
+    fi
+else
+    unset VLLM_FL_IMAGE_PLUGIN_ROOT
 fi
+
+export HYGON_USE_IMAGE_PLUGIN="${USE_IMAGE_PLUGIN}"
 
 echo "DTK_HOME=${DTK_HOME}"
 echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
-echo "VLLM_FL_IMAGE_PLUGIN_ROOT=${VLLM_FL_IMAGE_PLUGIN_ROOT}"
-echo "PYTHONPATH=${PYTHONPATH}"
+echo "HYGON_USE_IMAGE_PLUGIN=${HYGON_USE_IMAGE_PLUGIN}"
+if [[ "${USE_IMAGE_PLUGIN}" == "1" ]]; then
+    echo "VLLM_FL_IMAGE_PLUGIN_ROOT=${VLLM_FL_IMAGE_PLUGIN_ROOT}"
+    echo "PYTHONPATH=${PYTHONPATH}"
+fi
 test -e "${HIP_PATH}/lib/libgalaxyhip.so.5"
 test -e "${DTK_HOME}/llvm/lib/libomp.so"
 
@@ -78,13 +89,17 @@ import torch
 import vllm
 import vllm_fl
 
-image_plugin_root = Path(os.environ["VLLM_FL_IMAGE_PLUGIN_ROOT"]).resolve()
-expected_package = image_plugin_root / "vllm_fl"
-plugin_file = Path(vllm_fl.__file__).resolve()
-if plugin_file != expected_package / "__init__.py" and expected_package not in plugin_file.parents:
-    raise RuntimeError(
-        f"Unexpected vllm_fl path: {plugin_file}; expected under {expected_package}"
-    )
+if os.environ.get("HYGON_USE_IMAGE_PLUGIN", "1") == "1":
+    image_plugin_root = Path(os.environ["VLLM_FL_IMAGE_PLUGIN_ROOT"]).resolve()
+    expected_package = image_plugin_root / "vllm_fl"
+    plugin_file = Path(vllm_fl.__file__).resolve()
+    if (
+        plugin_file != expected_package / "__init__.py"
+        and expected_package not in plugin_file.parents
+    ):
+        raise RuntimeError(
+            f"Unexpected vllm_fl path: {plugin_file}; expected under {expected_package}"
+        )
 
 print(f"vLLM import ok: {vllm.__version__}")
 print(f"vLLM-FL import ok: {vllm_fl.__file__}")
