@@ -30,6 +30,12 @@ UBUNTU_VERSION="${UBUNTU_VERSION:-22.04}"
 VLLM_VERSION="${VLLM_VERSION:-0.19.0}"
 CANN_VERSION="${CANN_VERSION:-8.5.1}"
 CANN_CHIP="${CANN_CHIP:-910b}"
+MUSA_BASE_IMAGE="${MUSA_BASE_IMAGE:-registry.mthreads.com/mcconline/inference/vllm:v0.20.2-ph1-4.3.5-torch2.7.1-v1.1.0}"
+MUSA_VERSION="${MUSA_VERSION:-4.3.5}"
+MUSA_VLLM_VERSION="${MUSA_VLLM_VERSION:-0.20.2}"
+MUSA_PYTHON_VERSION="${MUSA_PYTHON_VERSION:-3.10}"
+MUSA_TORCH_VERSION="${MUSA_TORCH_VERSION:-2.7.1}"
+MUSA_FLAGGEMS_VERSION="${MUSA_FLAGGEMS_VERSION:-5.0.0}"
 HYGON_BASE_IMAGE="${HYGON_BASE_IMAGE:-harbor.sourcefind.cn:5443/dcu/admin/base/custom:vllm0.20.0-ubuntu22.04-dtk26.04-py3.10-MiniCPM-V-4.6}"
 HYGON_VLLM_VERSION="${HYGON_VLLM_VERSION:-0.20.2}"
 HYGON_DTK_VERSION="${HYGON_DTK_VERSION:-26.04}"
@@ -141,7 +147,7 @@ Usage: $(basename "$0") [OPTIONS]
 Build the vllm-plugin-FL Docker image.
 
 OPTIONS:
-    --platform PLATFORM    Platform to build: cuda, ascend, hygon, metax (default: ${PLATFORM})
+    --platform PLATFORM    Platform to build: cuda, ascend, hygon, metax, musa (default: ${PLATFORM})
     --target TARGET        Build target: dev, ci, release (default: ${TARGET})
     --image-name NAME      Image name (default: ${IMAGE_NAME})
     --image-tag TAG        Image tag (default: auto-generated)
@@ -161,6 +167,13 @@ VERSIONS (override via environment variables):
   Ascend:
     CANN_VERSION         CANN version (default: ${CANN_VERSION})
     CANN_CHIP            CANN chip: 910b, a3 (default: ${CANN_CHIP})
+  MUSA:
+    MUSA_BASE_IMAGE      Moore Threads base image (default: ${MUSA_BASE_IMAGE})
+    MUSA_VERSION         MUSA version used in image tag (default: ${MUSA_VERSION})
+    MUSA_VLLM_VERSION    vLLM empty-mode version (default: ${MUSA_VLLM_VERSION})
+    MUSA_PYTHON_VERSION  Python version in base image (default: ${MUSA_PYTHON_VERSION})
+    MUSA_TORCH_VERSION   PyTorch version in base image (default: ${MUSA_TORCH_VERSION})
+    MUSA_FLAGGEMS_VERSION FlagGems version in base image (default: ${MUSA_FLAGGEMS_VERSION})
   Hygon:
     HYGON_BASE_IMAGE     Base image (default: ${HYGON_BASE_IMAGE})
     HYGON_VLLM_VERSION   vLLM version installed in empty mode (default: ${HYGON_VLLM_VERSION})
@@ -192,6 +205,9 @@ EXAMPLES:
 
     # Build MetaX CI image
     ./build.sh --platform metax --target ci --image-name harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl
+
+    # Build Moore Threads MUSA dev image
+    ./build.sh --platform musa --target dev
 
     # Build with custom PyPI mirror
     ./build.sh --target dev --index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -310,8 +326,18 @@ elif [[ "${PLATFORM}" == "metax" ]]; then
     if [[ -z "${IMAGE_TAG}" ]]; then
         IMAGE_TAG="vllm-metax-${METAX_VLLM_VERSION}-maca.ai${METAX_MACA_VERSION}-torch2.8-${METAX_PYTHON_TAG}-ubuntu22.04-amd64-ci-git"
     fi
+elif [[ "${PLATFORM}" == "musa" ]]; then
+    PYTHON_VERSION="${MUSA_PYTHON_VERSION}"
+    VLLM_VERSION="${MUSA_VLLM_VERSION}"
+    BUILD_ARGS+=(
+        --build-arg "MUSA_BASE_IMAGE=${MUSA_BASE_IMAGE}"
+        --build-arg "FLAGGEMS_VERSION=${MUSA_FLAGGEMS_VERSION}"
+    )
+    if [[ -z "${IMAGE_TAG}" ]]; then
+        IMAGE_TAG="musa${MUSA_VERSION}-vllm${VLLM_VERSION}-torch${MUSA_TORCH_VERSION}-py${MUSA_PYTHON_VERSION}-${TARGET}"
+    fi
 else
-    err "Unknown platform '${PLATFORM}'. Must be 'cuda', 'ascend', 'hygon', or 'metax'."
+    err "Unknown platform '${PLATFORM}'. Must be 'cuda', 'ascend', 'hygon', 'metax', or 'musa'."
 fi
 
 FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
@@ -335,6 +361,11 @@ elif [[ "${PLATFORM}" == "metax" ]]; then
     msg "  MACA:           ${METAX_MACA_VERSION}"
     msg "  MetaX Python:   ${METAX_PYTHON_VERSION}"
     msg "  Base image:     ${METAX_BASE_IMAGE}"
+elif [[ "${PLATFORM}" == "musa" ]]; then
+    msg "  MUSA:           ${MUSA_VERSION}"
+    msg "  MUSA base:      ${MUSA_BASE_IMAGE}"
+    msg "  MUSA PyTorch:   ${MUSA_TORCH_VERSION}"
+    msg "  FlagGems:       ${MUSA_FLAGGEMS_VERSION}"
 fi
 msg "  Ubuntu:         ${UBUNTU_VERSION}"
 msg "  Python:         ${PYTHON_VERSION}"
