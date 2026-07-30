@@ -170,6 +170,16 @@ pytest -m multi_gpu         # Only multi-GPU tests
 
 E2E tests are driven by YAML configs under `tests/models/<model>/<case>.yaml`. Each config defines the LLM engine parameters and test behavior.
 
+### Model storage
+
+CI hosts and job containers use the same persistent model hierarchy. Store all
+models under `/data/models/`, mount `/data:/data` into the job container, and
+reference the absolute host path from every model case. Qwen models must use
+`/data/models/Qwen/<model-name>`. Hosts in mainland China may set
+`HF_ENDPOINT=https://hf-mirror.com` when downloading with the Hugging Face CLI.
+Set `HF_HUB_DISABLE_XET=1` as well so large files continue through the mirror
+instead of contacting the Hugging Face Xet CAS service directly.
+
 ### Text model example
 
 ```yaml
@@ -239,6 +249,7 @@ generate:
 | `serve.endpoints` | list | No | Endpoints to test: `completion`, `chat` |
 | `serve.completion_prompt` | str | No | Prompt for `/v1/completions` |
 | `serve.chat_messages` | list | No | Messages for `/v1/chat/completions` |
+| `serve.chat_cases` | list | No | Named chat requests run against one server; `generated_image: true` creates the local image fixture |
 | `serve.max_tokens` | int | No | Max tokens for serving requests (default: 50) |
 | `serve.api_key` | str | No | API key for authenticated endpoints |
 | `serve.extra_engine` | dict | No | Engine param overrides for serving only |

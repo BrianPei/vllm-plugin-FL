@@ -36,6 +36,10 @@ METAX_PYTHON_VERSION="${METAX_PYTHON_VERSION:-3.12}"
 METAX_PYTHON_TAG="${METAX_PYTHON_TAG:-py312}"
 METAX_MACA_VERSION="${METAX_MACA_VERSION:-3.7.0.107}"
 METAX_VLLM_VERSION="${METAX_VLLM_VERSION:-0.20.2}"
+ENFLAME_BASE_IMAGE="${ENFLAME_BASE_IMAGE:-harbor.baai.ac.cn/plugin/enflame001-gems5.4.0-treenone-triton3.6.0-cxnone-plugin0.2.0-vllm0.20.2-cp312-pt211-x64-1.9.29:202607221058}"
+ENFLAME_DRIVER_VERSION="${ENFLAME_DRIVER_VERSION:-1.9.29}"
+ENFLAME_PYTHON_VERSION="${ENFLAME_PYTHON_VERSION:-3.12}"
+ENFLAME_VLLM_VERSION="${ENFLAME_VLLM_VERSION:-0.20.2}"
 HYGON_BASE_IMAGE="${HYGON_BASE_IMAGE:-harbor.sourcefind.cn:5443/dcu/admin/base/custom:vllm0.20.0-ubuntu22.04-dtk26.04-py3.10-MiniCPM-V-4.6}"
 HYGON_VLLM_VERSION="${HYGON_VLLM_VERSION:-0.20.2}"
 HYGON_DTK_VERSION="${HYGON_DTK_VERSION:-26.04}"
@@ -142,7 +146,7 @@ Usage: $(basename "$0") [OPTIONS]
 Build the vllm-plugin-FL Docker image.
 
 OPTIONS:
-    --platform PLATFORM    Platform to build: cuda, ascend, hygon, metax (default: ${PLATFORM})
+    --platform PLATFORM    Platform to build: cuda, ascend, hygon, metax, enflame (default: ${PLATFORM})
     --target TARGET        Build target: dev, ci, release (default: ${TARGET})
     --image-name NAME      Image name (default: ${IMAGE_NAME})
     --image-tag TAG        Image tag (default: auto-generated)
@@ -168,6 +172,11 @@ VERSIONS (override via environment variables):
     METAX_PYTHON_VERSION Python version used in generated image tag (default: ${METAX_PYTHON_VERSION})
     METAX_PYTHON_TAG     Python tag fragment used in generated image tag (default: ${METAX_PYTHON_TAG})
     METAX_VLLM_VERSION   vLLM version installed in empty mode (default: ${METAX_VLLM_VERSION})
+  Enflame:
+    ENFLAME_BASE_IMAGE     Base image (default: ${ENFLAME_BASE_IMAGE})
+    ENFLAME_DRIVER_VERSION Driver version used in generated image tag (default: ${ENFLAME_DRIVER_VERSION})
+    ENFLAME_PYTHON_VERSION Python version in the base image (default: ${ENFLAME_PYTHON_VERSION})
+    ENFLAME_VLLM_VERSION   vLLM version in the base image (default: ${ENFLAME_VLLM_VERSION})
   Hygon:
     HYGON_BASE_IMAGE     Base image (default: ${HYGON_BASE_IMAGE})
     HYGON_VLLM_VERSION   vLLM version installed in empty mode (default: ${HYGON_VLLM_VERSION})
@@ -193,6 +202,9 @@ EXAMPLES:
 
     # Build MetaX CI image
     ./build.sh --platform metax --target ci --image-name harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl
+
+    # Build Enflame CI image
+    ./build.sh --platform enflame --target ci --image-name harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl
 
     # Build with custom PyPI mirror
     ./build.sh --target dev --index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -311,8 +323,22 @@ elif [[ "${PLATFORM}" == "metax" ]]; then
     if [[ -z "${IMAGE_TAG}" ]]; then
         IMAGE_TAG="vllm-metax-${METAX_VLLM_VERSION}-maca.ai${METAX_MACA_VERSION}-torch2.8-${METAX_PYTHON_TAG}-ubuntu22.04-amd64-ci-git"
     fi
+elif [[ "${PLATFORM}" == "enflame" ]]; then
+    PYTHON_VERSION="${ENFLAME_PYTHON_VERSION}"
+    VLLM_VERSION="${ENFLAME_VLLM_VERSION}"
+    if [[ "${IMAGE_NAME}" == "harbor.baai.ac.cn/flagscale/vllm-plugin-fl" ]]; then
+        IMAGE_NAME="harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl"
+    fi
+    BUILD_ARGS+=(
+        --build-arg "ENFLAME_BASE_IMAGE=${ENFLAME_BASE_IMAGE}"
+        --build-arg "VLLM_VERSION=${ENFLAME_VLLM_VERSION}"
+        --build-arg "DRIVER_VERSION=${ENFLAME_DRIVER_VERSION}"
+    )
+    if [[ -z "${IMAGE_TAG}" ]]; then
+        IMAGE_TAG="v${ENFLAME_VLLM_VERSION}-enflame-ci"
+    fi
 else
-    err "Unknown platform '${PLATFORM}'. Must be 'cuda', 'ascend', 'hygon', or 'metax'."
+    err "Unknown platform '${PLATFORM}'. Must be 'cuda', 'ascend', 'hygon', 'metax', or 'enflame'."
 fi
 
 FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
@@ -336,6 +362,10 @@ elif [[ "${PLATFORM}" == "metax" ]]; then
     msg "  MACA:           ${METAX_MACA_VERSION}"
     msg "  MetaX Python:   ${METAX_PYTHON_VERSION}"
     msg "  Base image:     ${METAX_BASE_IMAGE}"
+elif [[ "${PLATFORM}" == "enflame" ]]; then
+    msg "  Driver:         ${ENFLAME_DRIVER_VERSION}"
+    msg "  Enflame Python: ${ENFLAME_PYTHON_VERSION}"
+    msg "  Base image:     ${ENFLAME_BASE_IMAGE}"
 fi
 msg "  Ubuntu:         ${UBUNTU_VERSION}"
 msg "  Python:         ${PYTHON_VERSION}"
