@@ -23,7 +23,9 @@ platforms:
   cuda:
     enabled: true
   ascend:
-    enabled: false
+    # Ascend uses a scarce self-hosted NPU runner; keep it enabled when
+    # validating Ascend changes in PR CI.
+    enabled: true
   hygon:
     enabled: true
   metax:

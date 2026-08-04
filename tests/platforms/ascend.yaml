@@ -33,7 +33,7 @@ platform: ascend
 vendor: huawei
 
 device_types:
-  910b:
+  910c:
     memory_gb: 64
     tags: [ascend, bf16]
 
@@ -57,14 +57,15 @@ unsupported_features: []
 env_defaults: {}
 
 # ---- Device-specific test configurations ------------------------------------
-910b:
-  name: "910b"
+910c:
+  name: "910c"
   tests:
     e2e:
       # Add or remove test cases per model
-      inference: {}
+      inference:
+        qwen3_6: ["27b_tp2_eager_ascend", "35b_a3b_tp2_eager_ascend"]
       serving:
-        qwen3: ["4b_tp2"]
+        qwen3_6: ["27b_tp2_eager_ascend", "35b_a3b_tp2_eager_ascend"]
     functional:
       # Include patterns: "*" for all, or list specific paths
       include: "*"
@@ -75,3 +76,6 @@ env_defaults: {}
       include: "*"
       # Exclude patterns: empty list or list paths to exclude
       exclude: []
+    benchmark:
+      enabled: true
+      smoke: ["serve"]

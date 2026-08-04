@@ -11,7 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Fixed kernel entry points used by the WNA16 quantization adapters.
 
-# Keep the validated Ascend runtime compatible with FlagGems and
-# triton-ascend. The generic test extra otherwise resolves NumPy 2.x.
-numpy==1.26.4
+Implementations live in this package and are called directly. They are not
+registered with vllm-fl's general operator dispatch.
+"""
+
+from .gemm import is_wna16_gemm_available, wna16_gemm
+from .moe import is_wna16_moe_available, wna16_moe
+
+__all__ = [
+    "is_wna16_gemm_available",
+    "is_wna16_moe_available",
+    "wna16_gemm",
+    "wna16_moe",
+]
