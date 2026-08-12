@@ -52,5 +52,5 @@ zixiaoc200:
       include: "*"
       exclude: []
     benchmark:
-      enabled: false
-      smoke: []
+      enabled: true
+      smoke: ["throughput", "latency", "serve"]
