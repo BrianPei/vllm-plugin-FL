@@ -74,30 +74,53 @@ jobs:
         id: checkout1
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           sparse-checkout: |
             .github/configs
             .github/scripts
+            tests/platforms
         continue-on-error: true
       - name: Checkout (attempt 2)
         id: checkout2
         if: steps.checkout1.outcome == 'failure'
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           sparse-checkout: |
             .github/configs
             .github/scripts
+            tests/platforms
         continue-on-error: true
       - name: Checkout (attempt 3)
         if: steps.checkout2.outcome == 'failure'
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           sparse-checkout: |
             .github/configs
             .github/scripts
+            tests/platforms
       - name: Install PyYAML
         run: pip install pyyaml
+      - id: changes
+        name: Detect changed files (PR only)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} > /tmp/changed_files.txt
+            echo "file=/tmp/changed_files.txt" >> "$GITHUB_OUTPUT"
+            echo "Changed files:"
+            cat /tmp/changed_files.txt
+          else
+            echo "file=" >> "$GITHUB_OUTPUT"
+            echo "Non-PR event — full platform detection"
+          fi
       - id: detect
-        run: python3 .github/scripts/detect_platforms.py
+        run: |
+          CHANGED_ARG=""
+          if [ -n "${{ steps.changes.outputs.file }}" ]; then
+            CHANGED_ARG="--changed-files ${{ steps.changes.outputs.file }}"
+          fi
+          python3 .github/scripts/detect_platforms.py $CHANGED_ARG
 
   # ============================================================
   # Job 4a: CUDA platform testing

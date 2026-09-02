@@ -199,22 +199,6 @@ def check_model_paths(
 # Changed-file filtering for PR-only smart skip
 # ---------------------------------------------------------------------------
 
-# Any changed file starting with one of these prefixes triggers a full e2e run.
-_FULL_RUN_PREFIXES: list[str] = [
-    "vllm_fl/",
-    "csrc/",
-    "setup.py",
-    "pyproject.toml",
-    "requirements/",
-    "tests/e2e_tests/",
-    "tests/utils/",
-    "tests/run.py",
-    "tests/platforms/",
-    "tests/conftest.py",
-    ".github/",
-]
-
-
 def load_changed_files(path: str) -> list[str] | None:
     """Read a newline-delimited file of changed paths.
 
@@ -225,46 +209,87 @@ def load_changed_files(path: str) -> list[str] | None:
     return lines or None
 
 
-def filter_e2e_by_changes(
+def filter_e2e_by_model_configs(
     entries: list[dict],
     changed_files: list[str],
 ) -> list[dict]:
-    """Narrow the e2e matrix when only model config files changed.
-
-    Rules:
-    - If *any* changed file matches a full-run prefix → return all entries.
-    - If all changes are under ``tests/models/<model>/`` → keep only entries
-      whose cases reference an affected model.
-    - Unknown paths (not matching any known prefix) → full run for safety.
-    """
-    for f in changed_files:
-        if any(f.startswith(p) for p in _FULL_RUN_PREFIXES):
-            print("[filter] Core/CI file changed → full e2e run")
-            return entries
-
     affected_models: set[str] = set()
-    for f in changed_files:
-        if f.startswith("tests/models/"):
-            parts = f.split("/")
-            if len(parts) >= 3:
-                affected_models.add(parts[2])
-        else:
-            # Unknown path outside known safe-to-ignore dirs → full run
-            print(f"[filter] Unknown path '{f}' → full e2e run")
-            return entries
-
-    if not affected_models:
-        return entries
-
-    print(f"[filter] Only model configs changed, affected: {sorted(affected_models)}")
+    affected_cases: set[tuple[str, str]] = set()
+    for path in changed_files:
+        parts = path.split("/")
+        if len(parts) >= 3:
+            affected_models.add(parts[2])
+        if len(parts) == 4 and path.endswith(".yaml"):
+            affected_cases.add((parts[2], Path(parts[3]).stem))
 
     filtered: list[dict] = []
     for entry in entries:
         cases = json.loads(entry["cases"])
-        kept = [c for c in cases if c["model"] in affected_models]
+        if affected_cases:
+            kept = [
+                c for c in cases if (c["model"], c["case"]) in affected_cases
+            ]
+        else:
+            kept = [c for c in cases if c["model"] in affected_models]
         if kept:
-            filtered.append({**entry, "cases": json.dumps(kept, separators=(",", ":"))})
+            filtered.append(
+                {**entry, "cases": json.dumps(kept, separators=(",", ":"))}
+            )
     return filtered
+
+
+def smoke_e2e_matrix(entries: list[dict]) -> list[dict]:
+    smoke_entries = []
+    for entry in entries:
+        cases = json.loads(entry["cases"])
+        if cases:
+            smoke_entries.append(
+                {**entry, "cases": json.dumps(cases[:1], separators=(",", ":"))}
+            )
+    return smoke_entries
+
+
+def is_platform_only_change(platform: str, changed_files: list[str]) -> bool:
+    current_platform = False
+    for path in changed_files:
+        if path == ".github/configs/platforms.yml":
+            continue
+        if path.startswith("tests/models/"):
+            continue
+        if path == f".github/configs/{platform}.yml":
+            current_platform = True
+            continue
+        if path == f"tests/platforms/{platform}.yaml":
+            current_platform = True
+            continue
+        if path.startswith(f".github/scripts/{platform}/"):
+            current_platform = True
+            continue
+        return False
+    return current_platform
+
+
+def apply_pr_changes(
+    platform: str,
+    e2e_matrix: list[dict],
+    changed_files: list[str],
+) -> tuple[list[dict], bool, bool, bool]:
+    """Return e2e matrix and unit/functional/benchmark switches for a PR."""
+    if all(path.startswith("tests/models/") for path in changed_files):
+        return (
+            filter_e2e_by_model_configs(e2e_matrix, changed_files),
+            False,
+            False,
+            False,
+        )
+
+    if all(path.startswith("tests/benchmarks/") for path in changed_files):
+        return [], False, False, True
+
+    if is_platform_only_change(platform, changed_files):
+        return e2e_matrix, True, True, True
+
+    return smoke_e2e_matrix(e2e_matrix), True, True, False
 
 
 def build_unit_matrix(config: dict, devices: list[str]) -> list[dict]:
@@ -347,22 +372,35 @@ def main(argv: list[str] | None = None) -> int:
 
     e2e_matrix = build_e2e_matrix(config, devices, unsupported)
     unit_matrix = build_unit_matrix(config, devices)
+    run_unit = True
+    run_functional = True
+    run_benchmark = True
 
     # Apply PR smart-skip filtering when changed files are provided
     if args.changed_files:
         changed = load_changed_files(args.changed_files)
         if changed:
-            e2e_matrix = filter_e2e_by_changes(e2e_matrix, changed)
+            e2e_matrix, run_unit, run_functional, run_benchmark = apply_pr_changes(
+                args.platform,
+                e2e_matrix,
+                changed,
+            )
 
     e2e_json = json.dumps(e2e_matrix, separators=(",", ":"))
     unit_json = json.dumps(unit_matrix, separators=(",", ":"))
 
     set_output("e2e", e2e_json)
     set_output("unit", unit_json)
+    set_output("run_unit", json.dumps(run_unit))
+    set_output("run_functional", json.dumps(run_functional))
+    set_output("run_benchmark", json.dumps(run_benchmark))
 
     # Human-readable summary for CI logs
     print(f"Platform:    {args.platform}")
     print(f"Devices:     {devices}")
+    print(f"Unit:        {'enabled' if run_unit else 'skipped'}")
+    print(f"Functional:  {'enabled' if run_functional else 'skipped'}")
+    print(f"Benchmark:   {'enabled' if run_benchmark else 'skipped'}")
     print(f"E2E:         {len(e2e_matrix)} job(s)")
     for entry in e2e_matrix:
         case_list = json.loads(entry["cases"])
@@ -372,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         for c in case_list:
             print(f"      {c['model']}/{c['case']}")
-    print(f"Unit:        {len(unit_matrix)} config(s)")
+    print(f"Unit matrix: {len(unit_matrix)} config(s)")
     for entry in unit_matrix:
         print(
             f"  - device={entry['device']} "

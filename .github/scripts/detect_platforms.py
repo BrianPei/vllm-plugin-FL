@@ -20,6 +20,7 @@ names, e.g. ``["cuda", "ascend"]``.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -27,7 +28,9 @@ from pathlib import Path
 
 import yaml
 
-CONFIGS_DIR = Path(__file__).resolve().parents[1] / "configs"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CONFIGS_DIR = REPO_ROOT / ".github" / "configs"
+PLATFORMS_DIR = REPO_ROOT / "tests" / "platforms"
 REGISTRY_FILE = CONFIGS_DIR / "platforms.yml"
 
 # Names to exclude when falling back to auto-scan
@@ -84,7 +87,113 @@ def set_output(name: str, value: str) -> None:
         print(f"{name}={value}")
 
 
-def main() -> int:
+def load_changed_files(path: str) -> list[str]:
+    with open(path) as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def platform_from_path(path: str) -> str | None:
+    if path.startswith(".github/configs/"):
+        name = Path(path).stem
+        return None if name == "platforms" else name
+
+    if path.startswith(".github/scripts/"):
+        parts = path.split("/")
+        return parts[2] if len(parts) > 3 else None
+
+    if path.startswith("tests/platforms/"):
+        name = Path(path).stem
+        return None if name == "template" else name
+
+    return None
+
+
+def model_changes(changed_files: list[str]) -> tuple[set[str], set[tuple[str, str]]]:
+    models: set[str] = set()
+    cases: set[tuple[str, str]] = set()
+    for path in changed_files:
+        parts = path.split("/")
+        if len(parts) >= 3:
+            models.add(parts[2])
+        if len(parts) == 4 and path.endswith(".yaml"):
+            cases.add((parts[2], Path(parts[3]).stem))
+    return models, cases
+
+
+def platform_uses_model_change(
+    platform: str,
+    models: set[str],
+    cases: set[tuple[str, str]],
+) -> bool:
+    path = PLATFORMS_DIR / f"{platform}.yaml"
+    if not path.exists():
+        return False
+
+    with open(path) as f:
+        config = yaml.safe_load(f) or {}
+
+    for section in config.values():
+        e2e = (
+            section.get("tests", {}).get("e2e", {})
+            if isinstance(section, dict)
+            else {}
+        )
+        for task_models in e2e.values():
+            if not isinstance(task_models, dict):
+                continue
+            for model, task_cases in task_models.items():
+                if model not in models:
+                    continue
+                if not cases:
+                    return True
+                if not isinstance(task_cases, list):
+                    task_cases = [task_cases]
+                if any((model, str(case)) in cases for case in task_cases):
+                    return True
+    return False
+
+
+def detect_scoped_platforms(
+    enabled_platforms: list[str],
+    changed_files: list[str],
+) -> list[str] | None:
+    if not changed_files:
+        return None
+
+    platforms: set[str] = set()
+    has_model_change = False
+    for path in changed_files:
+        if path == ".github/configs/platforms.yml":
+            continue
+        if path.startswith("tests/models/"):
+            has_model_change = True
+            continue
+
+        platform = platform_from_path(path)
+        if not platform:
+            return None
+        platforms.add(platform)
+
+    if platforms:
+        enabled = set(enabled_platforms)
+        return [platform for platform in sorted(platforms) if platform in enabled]
+
+    if has_model_change:
+        models, cases = model_changes(changed_files)
+        return [
+            platform
+            for platform in enabled_platforms
+            if platform_uses_model_change(platform, models, cases)
+        ]
+
+    return None
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Detect CI platforms to test")
+    parser.add_argument("--changed-files", default=None)
+    args = parser.parse_args(argv)
+
     platforms = from_registry()
 
     if platforms is not None:
@@ -99,6 +208,16 @@ def main() -> int:
 
     if not platforms:
         print("::warning::No platforms detected", file=sys.stderr)
+
+    if args.changed_files:
+        changed_files = load_changed_files(args.changed_files)
+        scoped_platforms = detect_scoped_platforms(
+            platforms,
+            changed_files,
+        )
+        if scoped_platforms is not None:
+            platforms = scoped_platforms
+            source = "changed-files"
 
     result = json.dumps(platforms)
     set_output("platforms", result)

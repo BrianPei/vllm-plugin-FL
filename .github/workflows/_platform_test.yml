@@ -56,6 +56,9 @@ jobs:
     outputs:
       config: ${{ steps.load.outputs.config }}
       e2e_matrix: ${{ steps.matrix.outputs.e2e }}
+      run_unit: ${{ steps.matrix.outputs.run_unit }}
+      run_functional: ${{ steps.matrix.outputs.run_functional }}
+      run_benchmark: ${{ steps.matrix.outputs.run_benchmark }}
     steps:
       - name: Checkout (attempt 1)
         id: checkout1
@@ -101,6 +104,7 @@ jobs:
 
   unit:
     needs: setup
+    if: needs.setup.outputs.run_unit == 'true'
     uses: ./.github/workflows/_unit_test.yml
     with:
       platform: ${{ inputs.platform }}
@@ -114,6 +118,10 @@ jobs:
   # Runs once per platform (not per device) — functional tests are device-agnostic.
   functional:
     needs: [setup, unit]
+    if: |
+      always() &&
+      needs.setup.outputs.run_functional == 'true' &&
+      (needs.unit.result == 'success' || needs.unit.result == 'skipped')
     uses: ./.github/workflows/_functional_test.yml
     with:
       platform: ${{ inputs.platform }}
@@ -127,8 +135,12 @@ jobs:
   # Grouped by (task, device) — all model/case combos for the same task
   # run inside a single job to avoid repeated container startup.
   e2e:
-    needs: [setup, functional]
-    if: needs.setup.outputs.e2e_matrix != '[]'
+    needs: [setup, unit, functional]
+    if: |
+      always() &&
+      needs.setup.outputs.e2e_matrix != '[]' &&
+      (needs.unit.result == 'success' || needs.unit.result == 'skipped') &&
+      (needs.functional.result == 'success' || needs.functional.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -147,7 +159,13 @@ jobs:
 
   # Validates vllm bench throughput/latency/serve entrypoints.
   benchmark:
-    needs: [setup, e2e]
+    needs: [setup, unit, functional, e2e]
+    if: |
+      always() &&
+      needs.setup.outputs.run_benchmark == 'true' &&
+      (needs.unit.result == 'success' || needs.unit.result == 'skipped') &&
+      (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
     uses: ./.github/workflows/_benchmark_test.yml
     with:
       platform: ${{ inputs.platform }}
@@ -161,18 +179,20 @@ jobs:
   # Feishu notification — per-platform status
   # ============================================================
   notify:
-    needs: [unit, functional, e2e, benchmark]
+    needs: [setup, unit, functional, e2e, benchmark]
     if: always()
     uses: ./.github/workflows/_notify_feishu.yml
     with:
       platform: ${{ inputs.platform }}
       status: >-
-        ${{ (needs.unit.result == 'success' &&
-             needs.functional.result == 'success' &&
+        ${{ (needs.setup.result == 'success' &&
+             (needs.unit.result == 'success' || needs.unit.result == 'skipped') &&
+             (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
              (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
              (needs.benchmark.result == 'success' || needs.benchmark.result == 'skipped'))
             && 'success'
-            || (needs.unit.result == 'cancelled' ||
+            || (needs.setup.result == 'cancelled' ||
+                needs.unit.result == 'cancelled' ||
                 needs.functional.result == 'cancelled' ||
                 needs.e2e.result == 'cancelled' ||
                 needs.benchmark.result == 'cancelled')
