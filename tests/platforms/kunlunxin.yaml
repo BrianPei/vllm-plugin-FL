@@ -38,6 +38,7 @@ device_overrides:
       - qwen3_6/35b_a3b_tp4_graph
     llm:
       max_model_len: 16384
+      max_num_seqs: 16
       block_size: 128
       gpu_memory_utilization: 0.8
       disable_custom_all_reduce: false
