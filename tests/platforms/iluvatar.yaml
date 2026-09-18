@@ -29,7 +29,9 @@ device_overrides:
     serve:
       startup_retries: 300
       extra_engine:
-        # Avoid stale/cross-request multimodal features in vLLM's processor cache.
+        # Use replicated MM encoder inputs because TP4 weight sharding
+        # produces incorrect visual features on BI-V150.
+        mm_encoder_tp_mode: data
         mm_processor_cache_gb: 0
 
 env_defaults:
@@ -55,16 +57,11 @@ bi_v150:
         serving: 180
     functional:
       include: "*"
-      # CoreX 4.5 returns ixErrorNotSupported from CUDA graph capture_begin,
-      # so graph-mode execution cannot initialize on this vendor runtime.
+      # CUDA Graph capture currently fails at capture_begin.
+      # Tracked by flagos-ai/vllm-plugin-FL#539.
       exclude:
         - compilation/test_graph_capture.py
     unit:
       include: "*"
-      # CoreX 4.5 returns ixErrorNotSupported from CUDA graph capture_begin.
-      # These modules require graph support during import or execution.
-      exclude:
-        - worker/test_model_runner.py
-        - compilation/test_graph.py
     benchmark:
       enabled: false
