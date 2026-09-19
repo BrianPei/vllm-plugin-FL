@@ -25,9 +25,8 @@ runner_labels:
 container_volumes:
   - /dev:/dev
   - /lib/modules:/lib/modules
-  - /usr/local/corex-4.5.0.20260509/lib64/libcuda.so.1:/usr/local/corex/lib64/libcuda.so.1
-  - /usr/local/corex-4.5.0.20260509/lib64/libixml.so:/usr/local/corex/lib64/libixml.so
-  - /usr/local/corex-4.5.0.20260509/lib64/libixthunk.so:/usr/local/corex/lib64/libixthunk.so
+  - /usr/local/corex-4.5.0/lib64/libcuda.so.1:/usr/local/corex/lib64/libcuda.so.1
+  - /usr/local/corex-4.5.0/lib64/libixml.so:/usr/local/corex/lib64/libixml.so
   - /mnt/share/user_homes/models:/data/models/Qwen
 
 container_options: >-
