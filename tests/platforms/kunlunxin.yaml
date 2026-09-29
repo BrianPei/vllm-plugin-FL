@@ -43,7 +43,7 @@ device_overrides:
       disable_custom_all_reduce: false
     serve:
       served_model_name: "qwen3"
-      startup_retries: 300
+      startup_retries: 420
       max_tokens: 256
       extra_args:
         - "--reasoning-parser"
