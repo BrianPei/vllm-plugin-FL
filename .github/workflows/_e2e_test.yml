@@ -137,6 +137,7 @@ jobs:
           name: e2e-${{ inputs.platform }}-${{ inputs.device }}-${{ inputs.task }}
           path: |
             results/e2e/
+            /tmp/vllm_*.log
 
       - name: Check FlagCICD authentication
         id: flagcicd
