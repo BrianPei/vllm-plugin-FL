@@ -133,6 +133,17 @@ jobs:
             --pytest-reports \
             --output-dir results/e2e
 
+      - name: Collect serving failure logs
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p results/e2e/server-logs
+          for log_file in /tmp/vllm_*.log; do
+            if [ -f "$log_file" ]; then
+              cp -- "$log_file" results/e2e/server-logs/
+            fi
+          done
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -141,7 +152,6 @@ jobs:
           name: e2e-${{ inputs.platform }}-${{ inputs.device }}-${{ inputs.task }}
           path: |
             results/e2e/
-            /tmp/vllm_*.log
 
       - name: Check FlagCICD authentication
         id: flagcicd

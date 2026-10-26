@@ -122,7 +122,6 @@ jobs:
             results/unit/
             results/functional/
             coverage-${{ inputs.platform }}.json
-            report-${{ inputs.platform }}*.json
 
       - name: Check FlagCICD authentication
         id: flagcicd
