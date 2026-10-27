@@ -50,12 +50,6 @@ env_defaults:
   VLLM_FL_FLAGOS_BLACKLIST: "cat,slice"
   TRITON_CACHE_DIR: "/tmp/triton_cache"
 
-# Keep E2E worker tuning databases private to each process to avoid SQLite
-# lock contention. This trades persistent tuning-cache reuse for isolation.
-e2e_variants:
-  - env:
-      FLAGGEMS_DB_URL: "sqlite:///:memory:"
-
 bw1000:
   name: "bw1000"
   tests:

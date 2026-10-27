@@ -97,19 +97,19 @@ jobs:
         run: bash .github/scripts/${{ inputs.platform }}/setup.sh
 
       - name: Run unit tests
+        id: unit
         run: |
           python tests/run.py \
             --platform ${{ inputs.platform }} \
             --scope unit \
-            --pytest-reports \
             --output-dir results/unit
 
       - name: Run functional tests
+        id: functional
         run: |
           python tests/run.py \
             --platform ${{ inputs.platform }} \
             --scope functional \
-            --pytest-reports \
             --output-dir results/functional
 
       - name: Upload test results
@@ -122,10 +122,11 @@ jobs:
             results/unit/
             results/functional/
             coverage-${{ inputs.platform }}.json
+            report-${{ inputs.platform }}*.json
 
       - name: Check FlagCICD authentication
         id: flagcicd
-        if: ${{ !cancelled() && hashFiles('results/unit/pytest-reports.zip', 'results/functional/pytest-reports.zip') != '' }}
+        if: ${{ !cancelled() && hashFiles(format('coverage-{0}.json', inputs.platform)) != '' }}
         env:
           FLAGCICD_API_TOKEN: ${{ secrets.FLAGCICD_API_TOKEN }}
         run: |
@@ -136,30 +137,15 @@ jobs:
             echo "FlagCICD: upload skipped because credentials are unavailable; reports were retained as artifacts." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Upload unit test results to FlagCICD
-        if: ${{ !cancelled() && steps.flagcicd.outputs.configured == 'true' && hashFiles('results/unit/pytest-reports.zip') != '' }}
+      - name: Upload combined coverage report to FlagCICD
+        if: ${{ !cancelled() && steps.unit.outcome == 'success' && steps.functional.outcome == 'success' && steps.flagcicd.outputs.configured == 'true' && hashFiles(format('coverage-{0}.json', inputs.platform)) != '' }}
         uses: flagos-ai/FlagOps/actions/post-pytest-report@v2
         continue-on-error: true
         with:
           backend_url: 'https://flagcicd.flagos.net/flagcicd/api/v1/cicd/metrics/'
           api_token: ${{ secrets.FLAGCICD_API_TOKEN }}
-          report_path: 'results/unit/pytest-reports.zip'
+          report_path: 'coverage-${{ inputs.platform }}.json'
           file_format: 'json'
-          file_type: 'pytest'
-          is_zipped: 'true'
-          job_name: 'unit-${{ inputs.platform }}'
-          fail_on_error: 'true'
-
-      - name: Upload functional test results to FlagCICD
-        if: ${{ !cancelled() && steps.flagcicd.outputs.configured == 'true' && hashFiles('results/functional/pytest-reports.zip') != '' }}
-        uses: flagos-ai/FlagOps/actions/post-pytest-report@v2
-        continue-on-error: true
-        with:
-          backend_url: 'https://flagcicd.flagos.net/flagcicd/api/v1/cicd/metrics/'
-          api_token: ${{ secrets.FLAGCICD_API_TOKEN }}
-          report_path: 'results/functional/pytest-reports.zip'
-          file_format: 'json'
-          file_type: 'pytest'
-          is_zipped: 'true'
-          job_name: 'functional-${{ inputs.platform }}'
+          file_type: 'coverage'
+          job_name: 'coverage-${{ inputs.platform }}'
           fail_on_error: 'true'

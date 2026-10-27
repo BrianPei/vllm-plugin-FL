@@ -32,28 +32,28 @@ Platform-agnostic test suite for the vllm-plugin-FL project. All tests are desig
 - **Process isolation**: Each E2E test case runs in its own subprocess via `run.py`, with device cleanup between cases.
 - **Backend-agnostic fixtures**: The `device` fixture returns the correct device (`cuda:0` or `npu:0`) based on detected hardware.
 
-## CI report uploads
+## CI coverage uploads
 
-CI passes `--pytest-reports --output-dir results/<scope>` to `tests/run.py`.
-Each pytest invocation writes its own native JSON under `results/<scope>/pytest/`,
-and the runner packages the selected reports as `pytest-reports.zip`. This keeps
-parallel model/mode variants separate and preserves actual pytest case counts,
-outcomes, and timings instead of uploading the runner's test-group summary as
-a pytest report. Failed tests still return a failing exit status.
+The functional CI job runs unit and functional tests separately. The existing
+pytest-cov configuration measures Python source under `vllm_fl`; functional tests
+use `--cov-append` to add their executed lines to the unit-test data. The final
+`coverage-<platform>.json` is native coverage.py JSON, not a pytest outcome report.
+It is written in the checkout, even when `--output-dir` puts runner summaries
+under `results/unit/` and `results/functional/`.
 
-The existing functional, E2E, and benchmark workflows upload these archives to
-FlagCICD using `file_type=pytest`, `file_format=json`, and `is_zipped=true`.
-`FLAGCICD_API_TOKEN` must be configured in the repository/organization and passed
-through the reusable workflows. When the secret is unavailable (including fork
-PRs), CI records the skipped upload and retains reports as GitHub artifacts.
-An HTTP upload error is visible in the upload step but does not change the test
-result. Successful ingestion must be checked in FlagCICD, not inferred from a
-green test job. The receiving service must support zipped pytest JSON reports.
+After both test steps succeed, CI uploads the combined coverage file once through
+FlagOps using `file_type=coverage` and `file_format=json`, without ZIP packaging.
+The upload does not include E2E results, benchmark results, serving logs, or a
+merged pytest-case report. Existing E2E/benchmark test execution is unchanged.
 
-Unit and functional runner summaries are saved in separate directories. Their
-combined `coverage-<platform>.json` remains a separate artifact; it is not sent
-as `file_type=pytest`. Raw reports are generated only for invocations that reach
-pytest; failures before pytest starts remain in the runner summary and job log.
+`FLAGCICD_API_TOKEN` is inherited through the reusable workflows. If credentials
+are unavailable, including on fork PRs, CI records an explicit skip. Coverage,
+unit pytest reports, and separate runner summaries remain GitHub artifacts,
+including partial reports from failed tests. Partial coverage is not uploaded as
+a completed unit-plus-functional result. Upload failures are visible but do not
+change the test outcome. Backend parsing and dashboard ingestion must be verified
+in a trusted Nightly run; a green CI job alone does not establish successful
+coverage ingestion. No new coverage threshold or source exclusions are added.
 
 ## Directory Structure
 
