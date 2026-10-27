@@ -120,10 +120,6 @@ jobs:
 
       - name: Run E2E test
         run: |
-          # Keep Hygon TP workers from contending on the shared tuning database.
-          if [ "${{ inputs.platform }}" = "hygon" ]; then
-            export FLAGGEMS_DB_URL="sqlite:///:memory:"
-          fi
           python tests/run.py \
             --platform ${{ inputs.platform }} \
             --device "${{ inputs.device }}" \
