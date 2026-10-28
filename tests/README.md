@@ -34,26 +34,19 @@ Platform-agnostic test suite for the vllm-plugin-FL project. All tests are desig
 
 ## CI coverage uploads
 
-The functional CI job runs unit and functional tests separately. The existing
-pytest-cov configuration measures Python source under `vllm_fl`; functional tests
-use `--cov-append` to add their executed lines to the unit-test data. The final
-`coverage-<platform>.json` is native coverage.py JSON, not a pytest outcome report.
-It is written in the checkout, even when `--output-dir` puts runner summaries
-under `results/unit/` and `results/functional/`.
+Unit and functional tests keep their existing commands and output paths.
+pytest-cov measures `vllm_fl`; `--cov-append` adds functional coverage to the
+unit-test data and writes the combined `coverage-<platform>.json` in the checkout.
+No JSON concatenation, ZIP packaging, or additional coverage-combine step is used.
 
-After both test steps succeed, CI uploads the combined coverage file once through
-FlagOps using `file_type=coverage` and `file_format=json`, without ZIP packaging.
-The upload does not include E2E results, benchmark results, serving logs, or a
-merged pytest-case report. Existing E2E/benchmark test execution is unchanged.
-
-`FLAGCICD_API_TOKEN` is inherited through the reusable workflows. If credentials
-are unavailable, including on fork PRs, CI records an explicit skip. Coverage,
-unit pytest reports, and separate runner summaries remain GitHub artifacts,
-including partial reports from failed tests. Partial coverage is not uploaded as
-a completed unit-plus-functional result. Upload failures are visible but do not
-change the test outcome. Backend parsing and dashboard ingestion must be verified
-in a trusted Nightly run; a green CI job alone does not establish successful
-coverage ingestion. No new coverage threshold or source exclusions are added.
+After successful testing, CI uploads that coverage file once through
+`flagos-ai/FlagOps/actions/post-pytest-report@v2`, setting only the endpoint,
+token, and report path. Optional Action inputs retain their defaults as requested
+by upstream. The file is coverage.py JSON, not a pytest case-outcome report.
+If `FLAGCICD_API_TOKEN` is unavailable, upload is explicitly skipped. Existing
+runner summaries and coverage remain GitHub artifacts, including after failure;
+upload errors do not change test results. Actual parsing and dashboard ingestion
+must be verified through a trusted Nightly run after merging.
 
 ## Directory Structure
 

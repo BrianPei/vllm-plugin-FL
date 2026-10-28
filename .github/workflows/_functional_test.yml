@@ -97,20 +97,16 @@ jobs:
         run: bash .github/scripts/${{ inputs.platform }}/setup.sh
 
       - name: Run unit tests
-        id: unit
         run: |
           python tests/run.py \
             --platform ${{ inputs.platform }} \
-            --scope unit \
-            --output-dir results/unit
+            --scope unit
 
       - name: Run functional tests
-        id: functional
         run: |
           python tests/run.py \
             --platform ${{ inputs.platform }} \
-            --scope functional \
-            --output-dir results/functional
+            --scope functional
 
       - name: Upload test results
         if: always()
@@ -119,10 +115,9 @@ jobs:
         with:
           name: functional-${{ inputs.platform }}
           path: |
-            results/unit/
-            results/functional/
+            test-results-${{ inputs.platform }}.xml
+            test-results-${{ inputs.platform }}.json
             coverage-${{ inputs.platform }}.json
-            report-${{ inputs.platform }}*.json
 
       - name: Check FlagCICD authentication
         id: flagcicd
@@ -138,14 +133,10 @@ jobs:
           fi
 
       - name: Upload combined coverage report to FlagCICD
-        if: ${{ !cancelled() && steps.unit.outcome == 'success' && steps.functional.outcome == 'success' && steps.flagcicd.outputs.configured == 'true' && hashFiles(format('coverage-{0}.json', inputs.platform)) != '' }}
+        if: steps.flagcicd.outputs.configured == 'true'
         uses: flagos-ai/FlagOps/actions/post-pytest-report@v2
         continue-on-error: true
         with:
           backend_url: 'https://flagcicd.flagos.net/flagcicd/api/v1/cicd/metrics/'
           api_token: ${{ secrets.FLAGCICD_API_TOKEN }}
           report_path: 'coverage-${{ inputs.platform }}.json'
-          file_format: 'json'
-          file_type: 'coverage'
-          job_name: 'coverage-${{ inputs.platform }}'
-          fail_on_error: 'true'
