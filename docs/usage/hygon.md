@@ -9,6 +9,7 @@ editable installation is required. The recipe uses two Hygon BW1000 64 GiB DCUs.
 | Component | Version or configuration |
 |---|---|
 | Image (Linux AMD64) | `harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.28.0-hygon-ci` |
+| Image manifest | `sha256:5e3241d99ac74ab00c969320d4d9f7b146873d8fd13e184f0ef5cd05e0c584ba` |
 | Vendor base | DTK 26.04 / Ubuntu 22.04 / Python 3.10.12 |
 | vLLM | Distribution `0.28.0+empty`; runtime `0.28.0` |
 | PyTorch | Distribution `2.10.0+das.opt1.dtk2604.20260325.g6b060a`; runtime `2.10.0` |
