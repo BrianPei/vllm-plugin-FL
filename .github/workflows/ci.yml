@@ -224,15 +224,11 @@ jobs:
       run_benchmark: ${{ fromJson(needs.discover.outputs.run_benchmark) }}
     secrets: inherit
 
+  # THead uses normal registration and finite suites with zero-skip acceptance.
   test-thead:
     needs: discover
     if: contains(fromJson(needs.discover.outputs.platforms), 'thead')
-    uses: ./.github/workflows/_platform_test.yml
-    with:
-      platform: thead
-      ci_stage: pr
-      run_e2e: ${{ fromJson(needs.discover.outputs.run_e2e) }}
-      run_benchmark: ${{ fromJson(needs.discover.outputs.run_benchmark) }}
+    uses: ./.github/workflows/_thead_test.yml
     secrets: inherit
 
   test-iluvatar:
