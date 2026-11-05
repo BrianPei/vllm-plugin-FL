@@ -10,7 +10,7 @@ RUN /opt/vllm-fl/venv/bin/python -I -B /opt/repack-installed.py /opt/export torc
  && echo '0fd81f0e691486dfaf85f6a196f9f09d66118b7d2064b4f8c70b6c8bfdb4d52c  /opt/export/flagtree-0.6.0+hcu3.6-cp310-cp310-linux_x86_64.whl' | sha256sum -c - \
  && /opt/vllm-fl/venv/bin/python -I -B /opt/patch-vllm-wheel.py /opt/hygon/wheels/vllm-0.28.0+empty-cp310-cp310-linux_x86_64.whl /opt/export
 
-FROM ${HYGON_BASE_IMAGE} AS ci
+FROM ${HYGON_BASE_IMAGE} AS runtime
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 ARG INDEX_URL=https://mirrors.aliyun.com/pypi/simple
 ARG PLUGIN_SOURCE_SHA=72eaf18e61d5015b70988cb03a7ba3eeee0dc8b9
@@ -351,6 +351,25 @@ RUN git -C /opt/src init flaggems-vllm \
  && printf '%s\n' "$PLUGIN_SOURCE_SHA" > /opt/release/plugin-source-sha.txt \
  && printf '%s\n' "$FLAGGEMS_VLLM_SHA" > /opt/release/flaggems-vllm-source-sha.txt \
  && python -I -B /opt/src/plugin/.github/scripts/hygon/verify_install.py --static-only
+COPY docker/hygon/scripts/bash-env.sh /etc/bash_env.sh
 LABEL org.opencontainers.image.revision=${PLUGIN_SOURCE_SHA}
+WORKDIR /workspace
+CMD ["/bin/bash"]
+
+# Rebuild the Torch extension against the selected Torch 2.10 ABI. Development
+# headers stay in the builder; the final runtime retains the compatible wheel.
+FROM runtime AS flagcx_builder
+ARG FLAGCX_SOURCE_SHA=d1cf5cb9ae375198437a98622573443b363b1c44
+COPY docker/hygon/scripts/build-flagcx-wheel.sh /opt/build-flagcx-wheel.sh
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libgflags-dev libgoogle-glog-dev \
+ && bash /opt/build-flagcx-wheel.sh
+
+FROM runtime AS ci
+COPY --from=flagcx_builder /opt/release/flagcx-wheels /opt/release/flagcx-wheels
+RUN python -m pip install --no-deps --no-index /opt/release/flagcx-wheels/*.whl \
+ && python -m pip check \
+ && python -m pip freeze --all > /opt/release/requirements.lock.txt
+LABEL org.flagos.flagcx.source=d1cf5cb9ae375198437a98622573443b363b1c44
 WORKDIR /workspace
 CMD ["/bin/bash"]

@@ -28,10 +28,17 @@ published hash. Runtime code is never loaded from an editable checkout.
 | Triton | 3.6.0+gitc73250c4.staging |
 | FL source | 72eaf18e61d5015b70988cb03a7ba3eeee0dc8b9 |
 | FlagGems-vllm source | f775b37f3066e2935742d26c7592a5dd55499159 |
-| Communication | Vendor RCCL; FlagCX removed |
+| FlagCX | 0.14.0+dtk2604.torch2100, rebuilt for Torch 2.10 |
+| Default vLLM communication | Vendor RCCL; FLAGCX_PATH unset |
 
 The base's FlagCX extension is compiled against Torch 2.9 and fails to load
-with Torch 2.10. It is removed from this image. Keep `FLAGCX_PATH` unset.
+with Torch 2.10. The final stage replaces it with a wheel built against the
+selected Torch 2.10 from FlagCX v0.14.0 commit
+`d1cf5cb9ae375198437a98622573443b363b1c44`. gflags/glog development headers
+are installed only in the wheel builder. The sole source edit limits make
+parallelism through MAX_JOBS; it does not change communication code. The
+source SHA, build Torch version, wheel hash and patch are retained under
+`/opt/release/flagcx-wheels`. Keep `FLAGCX_PATH` unset for default vLLM RCCL.
 `runtime-env.sh` replaces the base's dynamic compiler selection so login
 shells consistently use the fixed installed compiler in `/flagos`.
 
@@ -80,3 +87,19 @@ stage but waited during network queries. The bastion session subsequently
 became stuck in its command-confirmation prompt while attempting to stop only
 that build container. Build completion and final model retest results must be
 read after a fresh SSH login. No image from this rebuild has been published.
+
+FlagCX compatibility work: normal Torch/FlagCX auto-import and real two-rank
+AllReduce, asynchronous AllReduce and AllGather passed on BW1000. The check
+used explicit IPv4 rendezvous at 127.0.0.1 and loopback interfaces. The first
+localhost/standalone rendezvous attempt timed out before worker launch; its
+log is retained. This is not a performance or multi-node validation.
+
+Retaining the Torch package does not automatically enable vLLM's separate
+FlagCX communicator. Its current import expects a historical
+`plugin.interservice.flagcx_wrapper` layout; the selected FlagCX release does
+not ship that file at that path. Enabling that vLLM route requires a separate
+wrapper integration and validation. The release defaults to RCCL throughout.
+
+The previously tested r2 image without FlagCX passed its own unit/functional
+and TP2 text/image serving checks. The final image retaining rebuilt FlagCX
+is now being rebuilt and revalidated; no Harbor image has been published yet.
