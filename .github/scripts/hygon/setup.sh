@@ -24,11 +24,12 @@ unset VLLM_VENDOR VLLM_FL_IMAGE_PLUGIN_ROOT HYGON_USE_IMAGE_PLUGIN
 unset PYTHONPATH PYTHONHOME
 unset SETUPTOOLS_SCM_PRETEND_VERSION SETUPTOOLS_SCM_PRETEND_VERSION_FOR_VLLM_PLUGIN_FL
 export GEMS_VENDOR=hygon VLLM_PLUGINS=fl
+export PIP_DISABLE_PIP_VERSION_CHECK=1
 PLUGIN_SOURCE_SHA="$(git -C "${REPO_ROOT}" rev-parse HEAD)"
 export PLUGIN_SOURCE_SHA
 
 BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/vllm-fl-hygon.XXXXXXXX")"
-trap 'rm -rf -- "${BUILD_DIR}"' EXIT
+# Retain build artifacts for diagnosis on hosts that disallow rm.
 cd "${BUILD_DIR}"
 python -I -B "${VERIFY_SCRIPT}" --write-vendor-snapshot "${BUILD_DIR}/vendor-before.json"
 python -I -B -m pip wheel \

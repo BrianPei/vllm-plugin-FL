@@ -58,7 +58,7 @@ KUNLUNXIN_VLLM_VERSION="${KUNLUNXIN_VLLM_VERSION:-0.20.2}"
 KUNLUNXIN_FLAGGEMS_REF="${KUNLUNXIN_FLAGGEMS_REF:-v5.0.0}"
 KUNLUNXIN_FLAGCX_REF="${KUNLUNXIN_FLAGCX_REF:-v0.13.0}"
 KUNLUNXIN_PLUGIN_FL_REF="${KUNLUNXIN_PLUGIN_FL_REF:-38e7dbc20197e2db742c4e4c9687d36ea4df9900}"
-HYGON_BASE_IMAGE="${HYGON_BASE_IMAGE:-harbor.baai.ac.cn/plugin/hygon-dtk26.04-tree0.6.0hcu3.6-triton3.6.0-cxnone-plugin0.3.0-vllm0.24.0-cp310-pt2100-x64:202609041747@sha256:d2530485457ede1d17dbb26704a3d4408d760ff3e363402599e1738dc5828807}"
+HYGON_BASE_IMAGE="${HYGON_BASE_IMAGE:-harbor.baai.ac.cn/flagos-runtime/flagos-runtime-hygon-dtk26.04@sha256:03e598b348e58e7233628394bbefa0ccef26969a091c7e6f2f02835161757f8b}"
 HYGON_VLLM_VERSION="${HYGON_VLLM_VERSION:-0.28.0}"
 HYGON_DTK_VERSION="${HYGON_DTK_VERSION:-26.04}"
 HYGON_PYTHON_VERSION="${HYGON_PYTHON_VERSION:-3.10}"
@@ -285,7 +285,7 @@ elif [[ "${PLATFORM}" == "hygon" ]]; then
         || err "PLUGIN_SOURCE_SHA must identify an existing Git commit."
     [[ "${resolved_source_sha}" == "${PLUGIN_SOURCE_SHA}" ]] || err "PLUGIN_SOURCE_SHA must identify a commit, not a tag object."
     # Use the selected commit's Dockerfile and COPY inputs, never working-tree files.
-    DOCKERFILE="docker/hygon/Dockerfile"
+    DOCKERFILE="docker/hygon/Dockerfile.v0.28.0"
     for build_arg in "${EXTRA_BUILD_ARGS[@]+"${EXTRA_BUILD_ARGS[@]}"}"; do
         case "${build_arg}" in
             PLUGIN_SOURCE_SHA|PLUGIN_SOURCE_SHA=*)
@@ -302,15 +302,10 @@ elif [[ "${PLATFORM}" == "hygon" ]]; then
     )
     [[ -z "${INDEX_URL}" ]] || BUILD_ARGS+=(--build-arg "INDEX_URL=${INDEX_URL}")
     [[ -z "${EXTRA_INDEX_URL}" ]] || BUILD_ARGS+=(--build-arg "EXTRA_INDEX_URL=${EXTRA_INDEX_URL}")
-    if [[ -n "${HYGON_GIT_CONFIG:-}" ]]; then
-        [[ -f "${HYGON_GIT_CONFIG}" ]] || err "HYGON_GIT_CONFIG file does not exist."
-        BUILD_SECRET_ARGS+=(--secret "id=git_config,src=${HYGON_GIT_CONFIG}")
-    fi
-    if [[ -n "${HYGON_VLLM_WHEEL_DIR:-}" ]]; then
-        [[ -d "${HYGON_VLLM_WHEEL_DIR}" ]] || err "HYGON_VLLM_WHEEL_DIR directory does not exist."
-        [[ "${HYGON_VLLM_WHEEL_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] || err "A validated HYGON_VLLM_WHEEL_SHA256 is required."
-        BUILD_SECRET_ARGS+=(--build-context "vllm_wheels=${HYGON_VLLM_WHEEL_DIR}")
-        BUILD_ARGS+=(--build-arg "VLLM_WHEEL_SHA256=${HYGON_VLLM_WHEEL_SHA256}")
+    [[ "${TARGET}" == "ci" ]] || err "The Hygon runtime 2.3.0 recipe currently supports --target ci only."
+    [[ "${HYGON_VLLM_VERSION}" == "0.28.0" ]] || err "This Hygon recipe is pinned to vLLM 0.28.0."
+    if [[ -n "${HYGON_GIT_CONFIG:-}${HYGON_VLLM_WHEEL_DIR:-}${HYGON_VLLM_WHEEL_SHA256:-}" ]]; then
+        err "This Hygon recipe uses pinned reference artifacts; old secret/wheel-context overrides are unsupported."
     fi
     if [[ -z "${IMAGE_TAG}" ]]; then
         IMAGE_TAG="v${HYGON_VLLM_VERSION}-hygon-${TARGET}"
