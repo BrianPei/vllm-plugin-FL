@@ -133,12 +133,13 @@ def test_full_effective_shared_owned_excluded_and_missing(tmp_path, sample):
     assert metadata["test_status"] == {"unit": "failure", "functional": "skipped"}
     assert metadata["status"] == "ok" and metadata["upload_allowed"] is True
     assert metadata["package_root"] == "vllm_fl"
+    assert metadata["backend"] == "cuda"
     assert len(metadata["config_sha256"]) == 64
 
 
 @pytest.mark.parametrize(
     "platform,covered,total",
-    [("nvidia", 5, 7), ("ascend", 3, 6), ("hygon", 2, 3), ("amd", 2, 3)],
+    [("nvidia", 5, 7), ("ascend", 3, 6), ("hygon", 2, 3)],
 )
 def test_existing_platform_rules_not_redefined(
     tmp_path, sample, platform, covered, total
@@ -307,19 +308,12 @@ def test_all_configured_backends_and_ci_platforms():
         "nvidia": "cuda",
         "ascend": "ascend",
         "hygon": None,
-        "amd": None,
         "metax": "metax",
-        "maca": "metax",
         "musa": "musa",
-        "mthreads": "musa",
         "enflame": "gcu",
-        "gcu": "gcu",
         "kunlunxin": "kunlunxin",
         "thead": "thead",
         "iluvatar": "iluvatar",
-        "biren": "supa",
-        "sunrise": "sunrise",
-        "tsingmicro": "txda",
     }
     assert {
         p: scope._platform_scope(config, p)[0] for p in config["platforms"]
@@ -327,11 +321,10 @@ def test_all_configured_backends_and_ci_platforms():
     assert set(ci["platforms"]) <= set(expected)
 
 
-@pytest.mark.parametrize(
-    "flags,covered,branches", [((True,), 3, 1), ((True, False), 4, 2)]
-)
+@pytest.mark.parametrize("branch", [False, True])
+@pytest.mark.parametrize("flags,covered", [((True,), 3), ((True, False), 4)])
 def test_real_coverage_json_with_branches_exclusions_and_append(
-    tmp_path, monkeypatch, flags, covered, branches
+    tmp_path, monkeypatch, flags, covered, branch
 ):
     # Run actual coverage.py on a tiny CPU-only package, not on the GPU project.
     import coverage
@@ -350,7 +343,7 @@ def test_real_coverage_json_with_branches_exclusions_and_append(
         cov = coverage.Coverage(
             data_file=str(data_file),
             source=[str(package)],
-            branch=True,
+            branch=branch,
             config_file=False,
         )
         if data_file.exists():
@@ -365,13 +358,22 @@ def test_real_coverage_json_with_branches_exclusions_and_append(
     raw = tmp_path / "real.json"
     cov.json_report(outfile=str(raw))
     proc, outputs = invoke(tmp_path, json.loads(raw.read_text()))
+    if branch:
+        assert proc.returncode != 0
+        assert outputs["metadata"]["status"] == "invalid_input"
+        assert outputs["metadata"]["upload_allowed"] is False
+        assert (
+            "Branch coverage reports are not supported" in outputs["metadata"]["error"]
+        )
+        assert outputs["effective"]["totals"] is None
+        return
     assert proc.returncode == 0, proc.stderr
     totals = outputs["effective"]["totals"]
     assert totals["num_statements"] == 4
     assert totals["covered_lines"] == covered and totals["missing_lines"] == 4 - covered
-    assert totals["num_branches"] == 2 and totals["covered_branches"] == branches
     assert totals["excluded_lines"] == 2
     assert totals["percent_covered"] == covered / 4 * 100
+    assert totals["percent_statements_covered"] == totals["percent_covered"]
 
 
 def test_invalid_rerun_replaces_previous_effective(tmp_path, sample):

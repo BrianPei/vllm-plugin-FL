@@ -37,7 +37,8 @@ Platform-agnostic test suite for the vllm-plugin-FL project. All tests are desig
 Unit and functional tests keep their existing commands and output paths.
 pytest-cov measures `vllm_fl`; `--cov-append` adds functional coverage to the
 unit-test data and writes the combined `coverage-<platform>.json` in the checkout.
-After the test commands finish, `.github/scripts/coverage_scope.py` preserves
+In the combined workflow, after the test commands finish,
+`.github/scripts/coverage_scope.py` preserves
 that native full-package report byte-for-byte as `coverage-<platform>-full.json`
 and writes `coverage-<platform>-effective.json` without overwriting the input. The effective
 denominator contains shared `vllm_fl` code plus the backend selected by
@@ -48,15 +49,16 @@ configuration hash, and the single authoritative effective total.
 The full-package baseline has its own totals in the separate `-full.json`
 artifact and is retained for audit only.
 
-The existing Hygon and AMD shared-only mappings are preserved, pending owner
-review. Backend availability alone does not establish code ownership: registration
+The trimmed upstream platform mappings are preserved, including Hygon
+shared-only mode; removed platform aliases are not restored. Backend availability alone does not establish code ownership: registration
 and availability checks can still run. No ownership rules or test filters are
 changed by the validation fixes. There is no JSON concatenation or ZIP packaging.
 
 The metric counts Python executable statements, not physical lines or native
 C++/CUDA/kernel coverage. Applicable missing statements remain in the denominator.
 Aggregation uses summed covered statements divided by summed statements, never
-an average of percentages. `package_root` is enforced: outside-package files,
+an average of percentages. Branch-enabled reports are rejected. The package root
+defaults to `vllm_fl` with the trimmed configuration: outside-package files,
 malformed JSON, incomplete summaries and inconsistent counts fail validation.
 
 An empty valid scope has status `empty_scope`, a null effective percentage and
@@ -67,12 +69,15 @@ has status `missing_input` and diagnostic markers, not fabricated coverage data.
 The public upload Action does not define a server-side N/A contract, so these
 cases fail closed. See [coverage tooling review](../.github/tests/README.md).
 
-After successful testing and coverage validation, CI uploads only the effective file through
+After successful testing and coverage validation, the combined workflow uploads
+only the effective file through
 `flagos-ai/FlagOps/actions/post-pytest-report@v2`, explicitly setting
 `file_type: coverage` and `job_name: coverage-<platform>-<scope>` alongside
-the endpoint, token, and effective report path. Scope follows the existing coverage
-command: `unit` for the standalone unit workflow, `unit,functional` for the combined
-workflow. Neither workflow has a device input, so the optional device segment is
+the endpoint, token, and effective report path. Scope is `unit,functional`.
+The standalone unit workflow follows upstream behavior: no platform filtering,
+no Full/Effective/metadata generation, and publication of the raw
+`coverage-<platform>.json` with scope `unit`. It checks test success, credentials
+and report existence, but does not run the scope processor validation. Neither workflow has a device input, so the optional device segment is
 omitted. The active platform chain calls only the combined workflow and uploads
 once; it does not also upload the standalone unit report. The file is coverage.py
 JSON, not a pytest case-outcome report; `file_format` retains its `json` default.

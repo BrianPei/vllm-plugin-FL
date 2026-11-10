@@ -43,9 +43,7 @@ def _load_config(path: Path) -> dict[str, Any]:
     return config
 
 
-def _platform_scope(
-    config: dict[str, Any], platform: str
-) -> tuple[str | None, dict[str, Any]]:
+def _platform_scope(config: dict[str, Any], platform: str) -> tuple[str | None, str]:
     platforms = config.get("platforms")
     if not isinstance(platforms, dict) or platform not in platforms:
         known = (
@@ -74,7 +72,7 @@ def _platform_scope(
     if backend is None and mode != "shared_only":
         raise ValueError(f"Coverage platform {platform!r} has no backend mapping")
     selected_backend = None if mode == "shared_only" else backend
-    return selected_backend, entry
+    return selected_backend, mode
 
 
 def _relative_root(value: Any, label: str) -> str:
@@ -153,6 +151,10 @@ def _validate_report(report: Any, package_root: str) -> dict[str, str]:
     meta = report.get("meta")
     if not isinstance(meta, dict) or type(meta.get("branch_coverage")) is not bool:
         raise ValueError("Missing or invalid meta.branch_coverage")
+    if meta["branch_coverage"]:
+        raise ValueError(
+            "Branch coverage reports are not supported by coverage_scope.py"
+        )
     normalized_paths = {}
     seen = set()
     for path, data in report["files"].items():
@@ -166,8 +168,6 @@ def _validate_report(report: Any, package_root: str) -> dict[str, str]:
         if not isinstance(data, dict):
             raise ValueError(f"{path}: file data must be a mapping")
         _validate_summary(data.get("summary"), path)
-        if meta["branch_coverage"] and "num_branches" not in data["summary"]:
-            raise ValueError(f"{path}: branch coverage counts are missing")
         for key in ("executed_lines", "missing_lines", "excluded_lines"):
             lines = data.get(key)
             if (
@@ -247,18 +247,8 @@ def _sum_totals(files: dict[str, Any]) -> dict[str, Any]:
         f"{percent:.0f}" if percent is not None else "N/A"
     )
 
-    branches = totals.get("num_branches", 0)
-    if branches:
-        branch_percent = 100.0 * totals.get("covered_branches", 0) / branches
-        totals["percent_covered_branches"] = branch_percent
-        totals["percent_covered_branches_display"] = f"{branch_percent:.0f}"
-
-    functions = totals.get("num_functions", 0)
-    if functions:
-        function_percent = 100.0 * totals.get("covered_functions", 0) / functions
-        totals["percent_covered_functions"] = function_percent
-        totals["percent_covered_functions_display"] = f"{function_percent:.0f}"
-
+    totals["percent_statements_covered"] = percent
+    totals["percent_statements_covered_display"] = totals["percent_covered_display"]
     return totals
 
 
@@ -302,21 +292,18 @@ def _effective_report(
     args: argparse.Namespace, metadata: dict[str, Any]
 ) -> dict[str, Any]:
     config = _load_config(args.config)
-    package_root = _relative_root(config.get("package_root"), "package_root")
+    package_root = _relative_root(config.get("package_root", "vllm_fl"), "package_root")
     vendor_root = _relative_root(config.get("vendor_root"), "vendor_root")
     if not vendor_root.startswith(package_root + "/"):
         raise ValueError("vendor_root must be inside package_root")
-    backend, platform_scope = _platform_scope(config, args.platform.lower())
+    backend, mode = _platform_scope(config, args.platform.lower())
     metadata.update(
         {
             "package_root": package_root,
             "vendor_root": vendor_root,
             "config_sha256": hashlib.sha256(args.config.read_bytes()).hexdigest(),
-            "runtime_backend": platform_scope.get("backend"),
-            "resolved_backend": backend,
-            "runtime_alias": platform_scope.get("runtime_alias"),
-            "scope_mode": platform_scope.get("mode", "backend_plus_shared"),
-            "notes": platform_scope.get("notes"),
+            "backend": backend,
+            "scope_mode": mode,
         }
     )
 

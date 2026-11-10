@@ -77,10 +77,6 @@ jobs:
         if: steps.checkout2.outcome == 'failure'
         uses: actions/checkout@v4
 
-      - name: Record checked-out commit
-        id: source
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Check device availability
         run: bash .github/scripts/${{ inputs.platform }}/check.sh
 
@@ -94,21 +90,6 @@ jobs:
             --platform ${{ inputs.platform }} \
             --scope unit
 
-      - name: Compute platform-effective coverage
-        id: coverage
-        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
-        run: |
-          python3 .github/scripts/coverage_scope.py \
-            --platform ${{ inputs.platform }} \
-            --scope unit \
-            --source-sha "${{ steps.source.outputs.sha }}" \
-            --unit-status "${{ steps.unit.outcome }}" \
-            --functional-status skipped \
-            --input coverage-${{ inputs.platform }}.json \
-            --full-output coverage-${{ inputs.platform }}-full.json \
-            --effective-output coverage-${{ inputs.platform }}-effective.json \
-            --metadata-output coverage-${{ inputs.platform }}-scope.json
-
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -117,14 +98,11 @@ jobs:
           name: coverage-${{ inputs.platform }}
           path: |
             coverage-${{ inputs.platform }}.json
-            coverage-${{ inputs.platform }}-full.json
-            coverage-${{ inputs.platform }}-effective.json
-            coverage-${{ inputs.platform }}-scope.json
             report-${{ inputs.platform }}.json
 
       - name: Check FlagCICD authentication
         id: flagcicd
-        if: ${{ success() && inputs.upload_coverage && steps.coverage.outcome == 'success' }}
+        if: ${{ success() && inputs.upload_coverage && hashFiles(format('coverage-{0}.json', inputs.platform)) != '' }}
         env:
           FLAGCICD_API_TOKEN: ${{ secrets.FLAGCICD_API_TOKEN }}
         run: |
@@ -135,13 +113,13 @@ jobs:
           fi
 
       - name: Upload coverage report to FlagCICD
-        if: ${{ success() && inputs.upload_coverage && steps.coverage.outcome == 'success' && steps.unit.outcome == 'success' && steps.flagcicd.outputs.configured == 'true' }}
+        if: ${{ success() && inputs.upload_coverage && hashFiles(format('coverage-{0}.json', inputs.platform)) != '' && steps.unit.outcome == 'success' && steps.flagcicd.outputs.configured == 'true' }}
         uses: flagos-ai/FlagOps/actions/post-pytest-report@v2
         continue-on-error: true
         with:
           backend_url: 'https://flagcicd.flagos.net/flagcicd/api/v1/cicd/metrics/'
           api_token: ${{ secrets.FLAGCICD_API_TOKEN }}
-          report_path: 'coverage-${{ inputs.platform }}-effective.json'
+          report_path: 'coverage-${{ inputs.platform }}.json'
           file_type: coverage
           job_name: 'coverage-${{ inputs.platform }}-unit'
           fail_on_error: 'false'

@@ -1,6 +1,7 @@
 # Coverage tooling regression tests and review
 
-Baseline: `ci/test-coverage` at `eaf6ad9c60ab53b85bf95d19e229f17646838aa9`.
+Synchronization baseline: `ci/test-coverage` at `f539a9c832db81e99ee5f1ce81f5d283c713e5ef`.
+The original local contribution at `f026e89` is preserved in the merge history.
 
 ## Run without GPUs
 
@@ -18,7 +19,8 @@ conftest files. The coverage fixtures include actual coverage.py branch reports,
 excluded statements, and persisted data loaded and appended across two runs.
 Synthetic fixtures check the exact numerator, denominator, exclusions, weighted
 totals, malformed input, package boundaries, path formats and evidence outputs.
-Hygon/AMD expectations lock the existing mappings, not endorse their correctness.
+Platform expectations follow the current trimmed configuration. Removed aliases
+are not restored; Hygon keeps the upstream shared-only rule.
 
 ## Failure and evidence contract
 
@@ -33,13 +35,21 @@ Full, Effective, metadata and input paths must be distinct. Error outputs replac
 previous Effective/metadata files so a failed retry cannot leave a valid-looking
 old metric. Metadata records requested scope separately from actual unit and
 functional step outcomes. `upload_allowed` describes metric validation; workflow
-publication additionally checks test success, credentials and the unit workflow's
-`upload_coverage` switch. Audit artifacts are retained independently of that switch.
+combined-workflow publication additionally checks test success and credentials.
+The standalone unit workflow retains and publishes its raw full-package report;
+it does not call the scope processor or generate Full/Effective/metadata files.
+Its publication checks test success, credentials, report existence and the
+`upload_coverage` switch. Its raw report does not receive scope-processor validation.
+Audit artifacts are retained independently of that switch.
 Configuration hashes allow the selected ownership configuration to be traced.
 
 The effective top-level percentage continues to mean covered Python statements
-divided by applicable Python statements, even for branch-enabled input. Full
-reports and per-file coverage.py details remain unchanged. Native coverage is
+divided by applicable Python statements. Branch-enabled input is rejected,
+matching the upstream statement-only policy. The original bytes remain in Full
+and diagnostic metadata blocks publication. Valid reports also expose the native
+`percent_statements_covered` keys. With the trimmed configuration, the package
+root defaults to `vllm_fl`; removed configuration entries are not reintroduced.
+Full reports and per-file coverage.py details remain unchanged. Native coverage is
 outside this tool's scope.
 
 ## FlagCICD contract investigation
@@ -77,19 +87,15 @@ workflows have no device input. `file_format` retains its `json` default.
 
 ## Local verification limits
 
-The recorded local environment is Windows / Python 3.14, pytest 9.1.1,
-PyYAML 6.0.3 and coverage.py 7.17.2. The hosted CPU workflow targets Python 3.12;
-it was authored but not triggered. The existing pure-Python model configuration
-tests were run with `--noconftest` to avoid unrelated GPU fixture imports. Full
-project unit tests and real GPU execution have not been validated here.
+Synchronization validation on 2026-11-10: 68 CPU-only coverage/workflow regression
+tests passed on Windows / Python 3.14. This includes real statement reports,
+branch-report rejection, invalid and empty input, evidence retention, the trimmed
+platform mappings and the standalone unit workflow's raw-report contract.
+The hosted workflow targets Python 3.12 and has not been triggered here.
+Full project tests, GPU execution and actual FlagCICD ingestion remain unverified.
 
-Actionlint 1.7.7 reports the existing dynamic `container.volumes` scalar in both
-reusable workflows. The same two errors were reproduced from untouched baseline
-files. With only that exact diagnostic filtered, the three changed/new workflows
-pass actionlint. This is not a claim that the inherited volumes syntax has been
-validated on GitHub. ShellCheck and Pyflakes integrations were disabled for this
-check; Python code was checked separately with Ruff.
-
-Local logs, JUnit results, generated Full/Effective/metadata fixtures, baseline
-validator output and the final verification summary are retained under
-`.review-evidence/`. They are local review evidence, not PR source files.
+Actionlint 1.7.7 reports the inherited dynamic `container.volumes` scalar in both
+reusable workflows. The same diagnostics are checked against upstream `f539a9c`.
+ShellCheck and Pyflakes integrations are disabled for this comparison.
+Local JUnit results and generated fixtures are retained under `.review-evidence/`
+and are not PR source files.
