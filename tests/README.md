@@ -38,29 +38,51 @@ Unit and functional tests keep their existing commands and output paths.
 pytest-cov measures `vllm_fl`; `--cov-append` adds functional coverage to the
 unit-test data and writes the combined `coverage-<platform>.json` in the checkout.
 After the test commands finish, `.github/scripts/coverage_scope.py` preserves
-that native full-package report as `coverage-<platform>-full.json` and rewrites
-`coverage-<platform>.json` as the platform-effective report. The effective
+that native full-package report byte-for-byte as `coverage-<platform>-full.json`
+and writes `coverage-<platform>-effective.json` without overwriting the input. The effective
 denominator contains shared `vllm_fl` code plus the backend selected by
 `.github/configs/coverage_scope.yml`; vendor directories for other platforms
 are excluded. `coverage-<platform>-scope.json` records the mapping, excluded
-directories, source SHA, scope, and the single authoritative effective total.
+directories, actual checkout SHA, requested scope, individual test-step outcomes,
+configuration hash, and the single authoritative effective total.
 The full-package baseline has its own totals in the separate `-full.json`
 artifact and is retained for audit only.
 
-Hygon remains a first-class platform in this manifest. Its current runtime
-resolver registers `vendor/cuda`, but that backend only reports available for
-the NVIDIA device name. Hygon therefore uses the shared-only denominator until
-a Hygon backend is added; Hygon-specific branches in shared modules remain in
-the denominator. There is no JSON concatenation or ZIP packaging.
+The existing Hygon and AMD shared-only mappings are preserved, pending owner
+review. Backend availability alone does not establish code ownership: registration
+and availability checks can still run. No ownership rules or test filters are
+changed by the validation fixes. There is no JSON concatenation or ZIP packaging.
 
-After successful testing, CI uploads that coverage file once through
-`flagos-ai/FlagOps/actions/post-pytest-report@v2`, setting only the endpoint,
-token, and report path. Optional Action inputs retain their defaults as requested
-by upstream. The file is coverage.py JSON, not a pytest case-outcome report.
+The metric counts Python executable statements, not physical lines or native
+C++/CUDA/kernel coverage. Applicable missing statements remain in the denominator.
+Aggregation uses summed covered statements divided by summed statements, never
+an average of percentages. `package_root` is enforced: outside-package files,
+malformed JSON, incomplete summaries and inconsistent counts fail validation.
+
+An empty valid scope has status `empty_scope`, a null effective percentage and
+display value `N/A` in local artifacts. It exits unsuccessfully and is not uploaded.
+Corrupt input has status `invalid_input`; its raw bytes remain in the Full artifact,
+while Effective is explicitly a diagnostic object with null totals. Missing input
+has status `missing_input` and diagnostic markers, not fabricated coverage data.
+The public upload Action does not define a server-side N/A contract, so these
+cases fail closed. See [coverage tooling review](../.github/tests/README.md).
+
+After successful testing and coverage validation, CI uploads only the effective file through
+`flagos-ai/FlagOps/actions/post-pytest-report@v2`, explicitly setting
+`file_type: coverage` and `job_name: coverage-<platform>-<scope>` alongside
+the endpoint, token, and effective report path. Scope follows the existing coverage
+command: `unit` for the standalone unit workflow, `unit,functional` for the combined
+workflow. Neither workflow has a device input, so the optional device segment is
+omitted. The active platform chain calls only the combined workflow and uploads
+once; it does not also upload the standalone unit report. The file is coverage.py
+JSON, not a pytest case-outcome report; `file_format` retains its `json` default.
 If `FLAGCICD_API_TOKEN` is unavailable, upload is explicitly skipped. Existing
 runner summaries and coverage remain GitHub artifacts, including after failure;
-upload errors do not change test results. Actual parsing and dashboard ingestion
-must be verified through a trusted Nightly run after merging.
+upload errors do not change test results. The standalone unit workflow's
+`upload_coverage` input controls FlagCICD publication, not audit artifact retention.
+Cancellation or runner loss can prevent evidence generation; artifact steps use
+`always()` to retain whatever is available. Actual server parsing and dashboard
+ingestion still require a separately authorized validation run.
 
 ## Directory Structure
 

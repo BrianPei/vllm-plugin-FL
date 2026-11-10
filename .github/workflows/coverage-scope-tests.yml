@@ -1,0 +1,38 @@
+name: Coverage scope tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/coverage_scope.py'
+      - '.github/configs/coverage_scope.yml'
+      - '.github/configs/platforms.yml'
+      - '.github/tests/**'
+      - '.github/workflows/coverage-scope-tests.yml'
+      - '.github/workflows/_unit_test.yml'
+      - '.github/workflows/_functional_test.yml'
+      - '.github/workflows/_platform_test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CPU-only test tools
+        run: python -m pip install pytest==9.1.1 PyYAML==6.0.3 coverage==7.17.2
+      - name: Test coverage processing and workflow contracts
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+        run: python -m pytest .github/tests -q -o addopts= --junitxml=coverage-scope-tests.xml
+      - name: Retain test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-scope-tests
+          path: coverage-scope-tests.xml
